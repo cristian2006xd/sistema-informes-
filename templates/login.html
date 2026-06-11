@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="login-page">
+    <div class="login-card">
+
+        <div class="login-logo">
+            <i class="bi bi-shield-check"></i>
+        </div>
+
+        <h3>Sistema de Informes TICS</h3>
+        <p class="login-subtitle">INAMHI &mdash; Acceso institucional</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mb-3">
+                        <i class="bi bi-exclamation-circle me-1"></i>{{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">
+                    <i class="bi bi-person me-1"></i>Usuario
+                </label>
+                <input type="text" name="usuario" class="form-control" placeholder="Ingrese su usuario" required autofocus>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">
+                    <i class="bi bi-lock me-1"></i>Contraseña
+                </label>
+                <input type="password" name="password" class="form-control" placeholder="Ingrese su contraseña" required>
+            </div>
+
+            <button type="submit" class="btn btn-login btn-primary w-100">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar al sistema
+            </button>
+        </form>
+
+        <p class="text-center text-muted mt-3 mb-0" style="font-size:0.72rem;">
+            Instituto Nacional de Meteorología e Hidrología &bull; TICS
+        </p>
+    </div>
+</div>
+{% endblock %}

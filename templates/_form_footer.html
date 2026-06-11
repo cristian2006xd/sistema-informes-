@@ -1,0 +1,84 @@
+{#
+  Macro incluido en los 3 formularios de informe.
+  Variables requeridas:
+    tipo_conclusiones : lista de strings con el texto de las conclusiones
+    config            : dict de configuracion_sistema
+#}
+
+<!-- ===================== CONCLUSIONES ===================== -->
+<div class="card-info mb-4">
+  <div class="section-title">
+    <i class="bi bi-check2-circle"></i> 3. Conclusiones
+    <span class="badge bg-secondary ms-2" style="font-size:.7rem;">Vista previa — se genera automáticamente</span>
+  </div>
+  <p class="text-muted mb-3" style="font-size:.82rem;">
+    Los campos resaltados en
+    <mark style="background:#fde68a;color:#92400e;padding:1px 4px;border-radius:3px;">amarillo</mark>
+    se sustituyen con los valores ingresados en el formulario.
+  </p>
+
+  <div id="conclusiones-preview" class="p-3 rounded"
+       style="background:#fffef0;border:1px solid #fde68a;font-family:'Times New Roman',serif;
+              font-size:.95rem;line-height:1.9;">
+    <!-- JS fills this -->
+  </div>
+</div>
+
+<!-- ===================== FIRMA ===================== -->
+<div class="card-info mb-4">
+  <div class="section-title"><i class="bi bi-pen-fill"></i> Elaborado / Aprobado</div>
+  <p class="text-muted mb-3" style="font-size:.82rem;">
+    Puede modificar los datos de firma para este informe específico.
+    Si los deja vacíos se usarán los valores de Configuración del sistema.
+  </p>
+
+  <div class="row g-3">
+    <!-- ELABORADO -->
+    <div class="col-md-6">
+      <div class="p-3 rounded" style="border:1px solid #bfdbfe;background:#f0f7ff;">
+        <div class="fw-bold mb-3" style="color:#1d4ed8;font-size:.85rem;">
+          <i class="bi bi-pencil-square me-1"></i> ELABORADO POR
+        </div>
+        <div class="mb-2">
+          <label class="form-label form-label-sm">Nombre / Título</label>
+          <input type="text" name="elaborado_nombre" class="form-control form-control-sm"
+                 placeholder="{{ config.get('elaborado_nombre','TÉCNICO DE TICS') }}"
+                 value="{{ config.get('elaborado_nombre','') }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label form-label-sm">Cargo</label>
+          <input type="text" name="elaborado_cargo" class="form-control form-control-sm"
+                 placeholder="{{ config.get('elaborado_cargo','TÉCNICO') }}"
+                 value="{{ config.get('elaborado_cargo','') }}">
+        </div>
+        <!-- Espacio de firma -->
+        <div style="border-bottom:1.5px solid #374151;margin:8px 0 4px;height:56px;"></div>
+        <div class="text-center text-muted" style="font-size:.75rem;">Firma</div>
+      </div>
+    </div>
+
+    <!-- APROBADO -->
+    <div class="col-md-6">
+      <div class="p-3 rounded" style="border:1px solid #a7f3d0;background:#f0fff8;">
+        <div class="fw-bold mb-3" style="color:#065f46;font-size:.85rem;">
+          <i class="bi bi-patch-check me-1"></i> APROBADO POR
+        </div>
+        <div class="mb-2">
+          <label class="form-label form-label-sm">Nombre / Título</label>
+          <input type="text" name="aprobado_nombre" class="form-control form-control-sm"
+                 placeholder="{{ config.get('aprobado_nombre','DIRECTOR/A DAF') }}"
+                 value="{{ config.get('aprobado_nombre','') }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label form-label-sm">Cargo</label>
+          <input type="text" name="aprobado_cargo" class="form-control form-control-sm"
+                 placeholder="{{ config.get('aprobado_cargo','DIRECTOR/A') }}"
+                 value="{{ config.get('aprobado_cargo','') }}">
+        </div>
+        <!-- Espacio de firma -->
+        <div style="border-bottom:1.5px solid #374151;margin:8px 0 4px;height:56px;"></div>
+        <div class="text-center text-muted" style="font-size:.75rem;">Firma</div>
+      </div>
+    </div>
+  </div>
+</div>

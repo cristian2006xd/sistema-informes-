@@ -1,0 +1,423 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
+            <div class="sidebar-brand-name">INAMHI TICS</div>
+            <div class="sidebar-brand-sub">Sistema de Informes</div>
+        </div>
+        <div class="sidebar-user">
+            <div class="sidebar-avatar">{{ session.get("nombres", "?")[:1] }}</div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name">{{ session.get("nombres", "") }}</div>
+                <div class="sidebar-user-role">{{ session.get("rol", "") }}</div>
+            </div>
+        </div>
+        <div class="sidebar-nav">
+            <div class="sidebar-section-label">Principal</div>
+            <a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+            {% if session["rol"] == "ADMINISTRADOR" %}
+            <div class="sidebar-section-label">Administración</div>
+            <a href="/usuarios"><i class="bi bi-people-fill"></i> Usuarios</a>
+            {% endif %}
+
+            {% if session["rol"] in ["ADMINISTRADOR", "TECNICO"] %}
+            <div class="sidebar-section-label">Gestión</div>
+            <a href="/funcionarios"><i class="bi bi-person-badge"></i> Funcionarios</a>
+            <a href="/bienes"><i class="bi bi-cpu"></i> Bienes</a>
+            <a href="/informes" class="active"><i class="bi bi-file-earmark-text"></i> Informes</a>
+            <a href="/documentos"><i class="bi bi-folder2-open"></i> Documentos</a>
+            {% endif %}
+
+            {% if session["rol"] == "ADMINISTRADOR" %}
+            <div class="sidebar-section-label">Sistema</div>
+            <a href="/auditoria"><i class="bi bi-shield-exclamation"></i> Auditoría</a>
+            <a href="/respaldos"><i class="bi bi-cloud-arrow-up"></i> Respaldos</a>
+            <a href="/configuracion"><i class="bi bi-gear"></i> Configuración</a>
+            {% endif %}
+        </div>
+        <div class="sidebar-footer">
+            <a href="/logout" class="logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <div class="page-header">
+            <h2><i class="bi bi-file-earmark-text"></i> Detalle del Informe</h2>
+            <p>
+                Gestión de bienes, documentos y fotografías del informe técnico
+                {% if informe.numero_informe %}
+                <strong>{{ informe.numero_informe }}</strong>.
+                {% endif %}
+            </p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- INFORMACIÓN DEL INFORME -->
+        <div class="card-info mb-4">
+            <div class="section-title">
+                <i class="bi bi-info-circle-fill"></i> Información del Informe
+            </div>
+
+            <!-- Botones de generación -->
+            <div class="d-flex gap-2 flex-wrap mb-4">
+                <a href="/informes/{{ informe.id }}/generar-pdf" class="btn btn-success">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> Generar PDF Institucional
+                </a>
+                <a href="/informes/{{ informe.id }}/generar-word" class="btn btn-primary">
+                    <i class="bi bi-file-earmark-word me-1"></i> Generar Word Institucional
+                </a>
+            </div>
+
+            <!-- Subir PDF firmado -->
+            <div class="sign-card mb-4">
+                <div class="sign-header">
+                    <i class="bi bi-file-earmark-lock2-fill"></i> Subir PDF Firmado Electrónicamente
+                </div>
+                <div class="sign-body">
+                    <p class="text-muted mb-3" style="font-size:0.875rem;">
+                        Selecciona el PDF firmado externamente con FirmaEC para registrarlo en la bitácora documental institucional.
+                    </p>
+                    <form method="POST" enctype="multipart/form-data" action="/informes/{{ informe.id }}/subir-pdf-firmado">
+                        <div class="row g-2">
+                            <div class="col-md-9">
+                                <input type="file" name="pdf_firmado" class="form-control" accept=".pdf" required>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-warning w-100">
+                                    <i class="bi bi-upload me-1"></i> Subir PDF Firmado
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Datos del informe en grid -->
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Número de Informe</div>
+                        <div class="info-value">
+                            {% if informe.numero_informe %}
+                            <strong>{{ informe.numero_informe }}</strong>
+                            {% else %}
+                            <span class="text-muted">Sin generar</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Tipo</div>
+                        <div class="info-value">{{ informe.tipo_informe }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Estado</div>
+                        <div class="info-value">
+                            {% if informe.estado == 'BORRADOR' %}
+                            <span class="badge bg-secondary">BORRADOR</span>
+                            {% elif informe.estado == 'GENERADO' %}
+                            <span class="badge bg-primary">GENERADO</span>
+                            {% elif informe.estado == 'FIRMADO' %}
+                            <span class="badge bg-success">FIRMADO DIGITALMENTE</span>
+                            {% elif informe.estado == 'ANULADO' %}
+                            <span class="badge bg-danger">ANULADO</span>
+                            {% else %}
+                            <span class="badge bg-dark">{{ informe.estado }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Firmado por</div>
+                        <div class="info-value">{{ informe.firmado_por or '—' }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Fecha de Firma</div>
+                        <div class="info-value">{{ informe.fecha_firma or '—' }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Validación de Firma</div>
+                        <div class="info-value">
+                            {% if informe.firma_validada == 1 %}
+                            <span class="badge bg-success"><i class="bi bi-patch-check-fill me-1"></i>VALIDADA</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>PENDIENTE</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Método de Validación</div>
+                        <div class="info-value">{{ informe.metodo_validacion or '—' }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Fecha de Validación</div>
+                        <div class="info-value">{{ informe.fecha_validacion or '—' }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Fecha del Informe</div>
+                        <div class="info-value">{{ informe.fecha_informe }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Funcionario</div>
+                        <div class="info-value"><strong>{{ informe.nombres }} {{ informe.apellidos }}</strong></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Cédula</div>
+                        <div class="info-value">{{ informe.cedula }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Cargo</div>
+                        <div class="info-value">{{ informe.cargo }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Dependencia</div>
+                        <div class="info-value">{{ informe.dependencia }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <div class="info-label">Ubicación Física</div>
+                        <div class="info-value">{{ informe.ubicacion_fisica }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AGREGAR BIEN -->
+        <div class="card-info mb-4">
+            <div class="section-title">
+                <i class="bi bi-cpu-fill"></i> Agregar Bien al Informe
+            </div>
+
+            <form method="POST" action="/informes/{{ informe.id }}/agregar-bien">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-9">
+                        <label class="form-label">Bien tecnológico disponible</label>
+                        <select name="bien_id" class="form-select" required>
+                            <option value="">Seleccione un bien...</option>
+                            {% for b in bienes_disponibles %}
+                            <option value="{{ b.id }}">{{ b.tipo }} — {{ b.marca }} — {{ b.modelo }} | Serie: {{ b.serie }} | ESBYE: {{ b.codigo_esbye }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-plus-lg me-1"></i> Agregar Bien
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- BIENES ASIGNADOS -->
+        <div class="card-info mb-4">
+            <div class="section-title">
+                <i class="bi bi-list-check"></i> Bienes Asignados al Informe
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>Tipo</th><th>Marca</th><th>Modelo</th>
+                            <th>Serie</th><th>Código ESBYE</th><th>Estado</th><th>Observación</th><th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in bienes_asignados %}
+                        <tr>
+                            <td><span class="text-muted">#{{ b.id }}</span></td>
+                            <td>{{ b.tipo }}</td>
+                            <td>{{ b.marca }}</td>
+                            <td>{{ b.modelo }}</td>
+                            <td><code style="font-size:0.78rem;">{{ b.serie }}</code></td>
+                            <td><code style="font-size:0.78rem;">{{ b.codigo_esbye }}</code></td>
+                            <td><span class="badge bg-info text-dark">{{ b.estado_bien }}</span></td>
+                            <td>{{ b.observacion }}</td>
+                            <td>
+                                <a href="/informes/{{ informe.id }}/quitar-bien/{{ b.id }}" class="btn btn-danger btn-sm">
+                                    <i class="bi bi-x-lg"></i> Quitar
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-3">
+                                <i class="bi bi-inbox me-1"></i> No hay bienes asignados aún.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- BITÁCORA DOCUMENTAL -->
+        <div class="card-info mb-4">
+            <div class="section-title">
+                <i class="bi bi-journal-text"></i> Bitácora Documental del Informe
+            </div>
+            <p class="text-muted mb-3" style="font-size:0.875rem;">
+                Historial de documentos generados, descargados y firmados para este informe técnico.
+            </p>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>#</th><th>Tipo</th><th>Archivo</th><th>Fecha</th><th>Actividad</th><th>Descargar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in documentos_generados %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                {% if doc.tipo_documento == 'PDF' %}
+                                <span class="badge bg-danger"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</span>
+                                {% elif doc.tipo_documento == 'WORD' %}
+                                <span class="badge bg-primary"><i class="bi bi-file-earmark-word me-1"></i>WORD</span>
+                                {% elif doc.tipo_documento == 'PDF_FIRMADO' %}
+                                <span class="badge bg-success"><i class="bi bi-file-earmark-lock me-1"></i>PDF FIRMADO</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ doc.tipo_documento }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size:0.78rem;"><strong>{{ doc.nombre_archivo }}</strong></td>
+                            <td>{{ doc.fecha_generacion }}</td>
+                            <td style="font-size:0.8rem; color:var(--text-muted);">
+                                {% if doc.tipo_documento == 'PDF' %}
+                                Documento PDF generado automáticamente por el sistema.
+                                {% elif doc.tipo_documento == 'WORD' %}
+                                Documento Word generado automáticamente por el sistema.
+                                {% elif doc.tipo_documento == 'PDF_FIRMADO' %}
+                                Firmado electrónicamente y registrado como evidencia documental.
+                                {% else %}
+                                Documento registrado en bitácora institucional.
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="/documentos/{{ doc.id }}/descargar" class="btn btn-success btn-sm">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-3">
+                                <i class="bi bi-inbox me-1"></i> No existen documentos registrados para este informe.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- FOTOGRAFÍAS -->
+        <div class="card-info mb-4">
+            <div class="section-title">
+                <i class="bi bi-images"></i> Fotografías del Informe
+            </div>
+
+            <form method="POST" enctype="multipart/form-data" action="/informes/{{ informe.id }}/subir-fotografia" class="mb-4">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Asociar fotografía a:</label>
+                        <select name="bien_id" class="form-select">
+                            <option value="">Fotografía General del Informe</option>
+                            {% for b in bienes_asignados %}
+                            <option value="{{ b.id }}">{{ b.tipo }} — {{ b.marca }} — {{ b.modelo }} | Serie: {{ b.serie }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Archivo de fotografía</label>
+                        <input type="file" name="fotografia" class="form-control" accept=".jpg,.jpeg,.png,.webp" required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-upload me-1"></i> Subir
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="row g-3">
+                {% for foto in fotografias %}
+                <div class="col-md-3">
+                    <div class="photo-card">
+                        <img src="{{ url_for('static', filename=foto.ruta_archivo) }}" alt="Fotografía del informe">
+                        <div class="photo-body">
+                            {% if foto.bien_id %}
+                            <strong style="font-size:0.8rem;">{{ foto.tipo }}</strong><br>
+                            <span class="text-muted">{{ foto.marca }} — {{ foto.serie }}</span><br>
+                            <span class="text-muted">ESBYE: {{ foto.codigo_esbye }}</span>
+                            {% else %}
+                            <strong style="font-size:0.8rem;">Fotografía General</strong>
+                            {% endif %}
+
+                            <hr class="my-2">
+
+                            <small class="text-muted">
+                                <i class="bi bi-person me-1"></i>{{ foto.usuario_subio or 'Sistema' }}<br>
+                                <i class="bi bi-calendar me-1"></i>{{ foto.fecha_subida }}
+                            </small>
+
+                            <hr class="my-2">
+
+                            <a href="/informes/{{ informe.id }}/eliminar-fotografia/{{ foto.id }}"
+                               class="btn btn-danger btn-sm w-100">
+                                <i class="bi bi-trash me-1"></i> Eliminar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-1"></i> No existen fotografías registradas para este informe.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </main>
+</div>
+{% endblock %}

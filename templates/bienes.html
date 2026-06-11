@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
+            <div class="sidebar-brand-name">INAMHI TICS</div>
+            <div class="sidebar-brand-sub">Sistema de Informes</div>
+        </div>
+        <div class="sidebar-user">
+            <div class="sidebar-avatar">{{ session.get("nombres", "?")[:1] }}</div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name">{{ session.get("nombres", "") }}</div>
+                <div class="sidebar-user-role">{{ session.get("rol", "") }}</div>
+            </div>
+        </div>
+        <div class="sidebar-nav">
+            <div class="sidebar-section-label">Principal</div>
+            <a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+            {% if session["rol"] == "ADMINISTRADOR" %}
+            <div class="sidebar-section-label">Administración</div>
+            <a href="/usuarios"><i class="bi bi-people-fill"></i> Usuarios</a>
+            {% endif %}
+
+            {% if session["rol"] in ["ADMINISTRADOR", "TECNICO"] %}
+            <div class="sidebar-section-label">Gestión</div>
+            <a href="/funcionarios"><i class="bi bi-person-badge"></i> Funcionarios</a>
+            <a href="/bienes" class="active"><i class="bi bi-cpu"></i> Bienes</a>
+            <a href="/informes"><i class="bi bi-file-earmark-text"></i> Informes</a>
+            <a href="/documentos"><i class="bi bi-folder2-open"></i> Documentos</a>
+            {% endif %}
+
+            {% if session["rol"] == "ADMINISTRADOR" %}
+            <div class="sidebar-section-label">Sistema</div>
+            <a href="/auditoria"><i class="bi bi-shield-exclamation"></i> Auditoría</a>
+            <a href="/respaldos"><i class="bi bi-cloud-arrow-up"></i> Respaldos</a>
+            <a href="/configuracion"><i class="bi bi-gear"></i> Configuración</a>
+            {% endif %}
+        </div>
+        <div class="sidebar-footer">
+            <a href="/logout" class="logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <div class="page-header">
+            <h2><i class="bi bi-cpu"></i> Gestión de Bienes</h2>
+            <p>Registro de equipos tecnológicos — marcas, series y códigos ESBYE.</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- FORMULARIO -->
+        <div class="card-info mb-4">
+            <div class="section-title">
+                <i class="bi bi-plus-circle-fill"></i> Crear Nuevo Bien
+            </div>
+
+            <form method="POST" action="/bienes/crear">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Tipo de Bien</label>
+                        <select name="tipo_id" class="form-select" required>
+                            <option value="">Seleccione tipo...</option>
+                            {% for t in tipos_bienes %}
+                            <option value="{{ t.id }}">{{ t.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Marca</label>
+                        <select name="marca_id" class="form-select" required>
+                            <option value="">Seleccione marca...</option>
+                            {% for m in marcas %}
+                            <option value="{{ m.id }}">{{ m.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Estado del Bien</label>
+                        <select name="estado_id" class="form-select" required>
+                            <option value="">Seleccione estado...</option>
+                            {% for e in estados_bienes %}
+                            <option value="{{ e.id }}">{{ e.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Modelo</label>
+                        <input type="text" name="modelo" class="form-control" placeholder="Modelo del equipo">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Serie</label>
+                        <input type="text" name="serie" class="form-control" placeholder="Número de serie">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Código ESBYE</label>
+                        <input type="text" name="codigo_esbye" class="form-control" placeholder="Código ESBYE">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Código Anterior</label>
+                        <input type="text" name="codigo_anterior" class="form-control" placeholder="Código patrimonial anterior">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Observación</label>
+                        <input type="text" name="observacion" class="form-control" placeholder="Observación adicional">
+                    </div>
+                    <div class="col-md-3 mb-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-save me-1"></i> Guardar Bien
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- TABLA -->
+        <div class="card-info">
+            <div class="section-title">
+                <i class="bi bi-list-ul"></i> Lista de Bienes Tecnológicos
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tipo</th>
+                            <th>Marca</th>
+                            <th>Modelo</th>
+                            <th>Serie</th>
+                            <th>Cód. ESBYE</th>
+                            <th>Cód. Anterior</th>
+                            <th>Estado</th>
+                            <th>Observación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in bienes %}
+                        <tr>
+                            <td><span class="text-muted">#{{ b.id }}</span></td>
+                            <td>{{ b.tipo }}</td>
+                            <td>{{ b.marca }}</td>
+                            <td>{{ b.modelo }}</td>
+                            <td><code style="font-size:0.78rem;">{{ b.serie }}</code></td>
+                            <td><code style="font-size:0.78rem;">{{ b.codigo_esbye }}</code></td>
+                            <td><code style="font-size:0.78rem;">{{ b.codigo_anterior or '—' }}</code></td>
+                            <td><span class="badge bg-info text-dark">{{ b.estado_bien }}</span></td>
+                            <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ b.observacion }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:0.3;"></i>
+                                No existen bienes registrados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+</div>
+{% endblock %}

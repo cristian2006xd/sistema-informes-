@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .welcome-banner {
+    background: linear-gradient(135deg, #0f2557 0%, #1a3a6c 50%, #2563eb 100%);
+    border-radius: 16px;
+    padding: 1.8rem 2rem;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .welcome-banner::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.06);
+  }
+  .welcome-banner::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; right: 80px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.04);
+  }
+  .welcome-greeting { font-size:1.35rem; font-weight:700; line-height:1.2; }
+  .welcome-sub { opacity:.75; font-size:.85rem; margin-top:.25rem; }
+  .welcome-date { font-size:.78rem; opacity:.6; margin-top:.5rem; letter-spacing:.5px; }
+  .welcome-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    background:rgba(255,255,255,.15); border-radius:20px;
+    padding:3px 10px; font-size:.72rem; font-weight:600;
+    letter-spacing:.5px; backdrop-filter:blur(4px);
+    border:1px solid rgba(255,255,255,.2);
+  }
+  .welcome-icon {
+    font-size:4rem; opacity:.12; position:absolute;
+    right:2rem; top:50%; transform:translateY(-50%);
+  }
+
+  /* STAT CARDS */
+  .kpi-card {
+    background:#fff;
+    border-radius:14px;
+    padding:1.25rem 1.4rem;
+    box-shadow:0 2px 12px rgba(0,0,0,.07);
+    display:flex; align-items:center; gap:1rem;
+    transition:transform .2s, box-shadow .2s;
+    border:1px solid rgba(0,0,0,.04);
+  }
+  .kpi-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,.11); }
+  .kpi-icon-wrap {
+    width:52px; height:52px; border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem; flex-shrink:0;
+  }
+  .kpi-val { font-size:1.9rem; font-weight:800; line-height:1; color:#0f172a; }
+  .kpi-label { font-size:.75rem; color:#64748b; font-weight:500; margin-top:2px; }
+  .kpi-sub { font-size:.7rem; margin-top:4px; font-weight:600; }
+
+  /* CHART CARD */
+  .chart-card {
+    background:#fff; border-radius:14px; padding:1.4rem;
+    box-shadow:0 2px 12px rgba(0,0,0,.07);
+    border:1px solid rgba(0,0,0,.04); height:100%;
+  }
+  .chart-card-title {
+    font-size:.8rem; font-weight:700; color:#374151; letter-spacing:.4px;
+    text-transform:uppercase; margin-bottom:1rem;
+    display:flex; align-items:center; gap:.4rem;
+  }
+
+  /* ACTIVITY FEED */
+  .activity-card {
+    background:#fff; border-radius:14px; padding:1.4rem;
+    box-shadow:0 2px 12px rgba(0,0,0,.07);
+    border:1px solid rgba(0,0,0,.04);
+  }
+  .activity-item {
+    display:flex; align-items:center; gap:.85rem;
+    padding:.5rem 0;
+    border-bottom:1px solid #f1f5f9;
+  }
+  .activity-item:last-child { border-bottom:none; }
+  .activity-dot {
+    width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:4px;
+  }
+  .activity-num { font-size:.78rem; font-weight:700; color:#1e293b; }
+  .activity-who { font-size:.72rem; color:#64748b; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px; }
+  .activity-time { font-size:.68rem; color:#94a3b8; white-space:nowrap; }
+
+  /* TIPO BREAKDOWN */
+  .breakdown-card {
+    background:#fff; border-radius:14px; padding:1.4rem;
+    box-shadow:0 2px 12px rgba(0,0,0,.07);
+    border:1px solid rgba(0,0,0,.04);
+  }
+  .breakdown-item { margin-bottom:.85rem; }
+  .breakdown-item:last-child { margin-bottom:0; }
+  .breakdown-label { font-size:.74rem; color:#374151; font-weight:600; margin-bottom:.3rem; display:flex; justify-content:space-between; }
+  .breakdown-bar { height:6px; border-radius:3px; background:#f1f5f9; overflow:hidden; }
+  .breakdown-fill { height:100%; border-radius:3px; transition:width .8s ease; }
+
+  @keyframes countUp {
+    from { opacity:0; transform:translateY(8px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .kpi-val { animation:countUp .5s ease forwards; }
+</style>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
+      <div class="sidebar-brand-name">INAMHI TICS</div>
+      <div class="sidebar-brand-sub">Sistema de Informes</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-avatar">{{ session.get("nombres","?")[:1] }}</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">{{ session.get("nombres","") }}</div>
+        <div class="sidebar-user-role">{{ session.get("rol","") }}</div>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/dashboard" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+      {% if session["rol"] == "TECNICO" %}
+      <div class="sidebar-section-label">Informes</div>
+      <a href="/informe/revision-asignacion"><i class="bi bi-pc-display-horizontal"></i> Revisión (Asignación)</a>
+      <a href="/informe/descargo"><i class="bi bi-box-arrow-right"></i> Descargo</a>
+      <a href="/informe/revision-estado"><i class="bi bi-clipboard2-pulse"></i> Revisión (Estado)</a>
+      <a href="/informe/cambio-actualizacion"><i class="bi bi-arrow-repeat"></i> Cambio y Actualización</a>
+      <a href="/informe/instalacion"><i class="bi bi-tools"></i> Instalación</a>
+      {% endif %}
+
+      {% if session["rol"] in ["ADMINISTRADOR", "CONSULTA"] %}
+      <a href="/historial"><i class="bi bi-clock-history"></i> Historial</a>
+      {% endif %}
+
+      {% if session["rol"] == "ADMINISTRADOR" %}
+      <div class="sidebar-section-label">Sistema</div>
+      <a href="/usuarios"><i class="bi bi-people-fill"></i> Usuarios</a>
+      <a href="/auditoria"><i class="bi bi-shield-exclamation"></i> Auditoría</a>
+      <a href="/configuracion"><i class="bi bi-gear"></i> Configuración</a>
+      {% endif %}
+    </div>
+    <div class="sidebar-footer">
+      <a href="/logout" class="logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <!-- WELCOME BANNER -->
+    <div class="welcome-banner">
+      <div style="position:relative;z-index:1;">
+        <div class="welcome-badge mb-2">
+          <i class="bi bi-circle-fill" style="font-size:.45rem;color:#4ade80;"></i>
+          {{ session.get("rol","") }}
+        </div>
+        <div class="welcome-greeting" id="greeting-text">Bienvenido/a, {{ session.get("nombres","").split()[0] }}</div>
+        <div class="welcome-sub">Panel de control — Sistema de Informes Técnicos INAMHI</div>
+        <div class="welcome-date" id="live-date"></div>
+      </div>
+      <i class="bi bi-file-earmark-bar-graph welcome-icon"></i>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-xl-3">
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);">
+            <i class="bi bi-file-earmark-text" style="color:#2563eb;"></i>
+          </div>
+          <div>
+            <div class="kpi-val" data-target="{{ total_informes }}">0</div>
+            <div class="kpi-label">Total Informes</div>
+            <div class="kpi-sub" style="color:#2563eb;">
+              <i class="bi bi-calendar3 me-1"></i>{{ total_este_mes }} este mes
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap" style="background:linear-gradient(135deg,#d1fae5,#a7f3d0);">
+            <i class="bi bi-calendar-check" style="color:#059669;"></i>
+          </div>
+          <div>
+            <div class="kpi-val" data-target="{{ total_este_mes }}">0</div>
+            <div class="kpi-label">Este Mes</div>
+            <div class="kpi-sub" style="color:#059669;">
+              <i class="bi bi-activity me-1"></i>{{ total_hoy }} hoy
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe);">
+            <i class="bi bi-people-fill" style="color:#7c3aed;"></i>
+          </div>
+          <div>
+            <div class="kpi-val" data-target="{{ total_usuarios }}">0</div>
+            <div class="kpi-label">Usuarios</div>
+            <div class="kpi-sub" style="color:#7c3aed;">
+              <i class="bi bi-person-check me-1"></i>activos en sistema
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap" style="background:linear-gradient(135deg,#fef3c7,#fde68a);">
+            <i class="bi bi-shield-check" style="color:#d97706;"></i>
+          </div>
+          <div>
+            <div class="kpi-val" data-target="{{ total_auditorias }}">0</div>
+            <div class="kpi-label">Registros Auditoría</div>
+            <div class="kpi-sub" style="color:#d97706;">
+              <i class="bi bi-journal-text me-1"></i>eventos registrados
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div class="row g-4 mb-4">
+      <div class="col-lg-8">
+        <div class="chart-card">
+          <div class="chart-card-title">
+            <i class="bi bi-bar-chart-line-fill" style="color:#2563eb;"></i>
+            Informes por Mes
+            <span class="ms-auto" style="font-size:.68rem;color:#94a3b8;font-weight:400;text-transform:none;">Últimos 6 meses</span>
+          </div>
+          <canvas id="graficoMes" style="max-height:220px;"></canvas>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="chart-card">
+          <div class="chart-card-title">
+            <i class="bi bi-pie-chart-fill" style="color:#7c3aed;"></i>
+            Distribución por Tipo
+          </div>
+          <canvas id="graficoTipo" style="max-height:220px;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY + BREAKDOWN -->
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <div class="activity-card h-100 d-flex flex-column">
+          <div class="chart-card-title" style="margin-bottom:.75rem;">
+            <i class="bi bi-clock-history" style="color:#059669;"></i>
+            Actividad Reciente
+            <span class="ms-auto" style="font-size:.68rem;color:#94a3b8;font-weight:400;text-transform:none;">Últimos informes generados</span>
+          </div>
+          {% set tipo_colors = {
+            "RE_ASIGNACION": "#2563eb",
+            "DESCARGO": "#d97706",
+            "RE_ESTADO": "#059669",
+            "CAMBIO_ACTUALIZACION": "#7c3aed",
+            "INSTALACION": "#0891b2"
+          } %}
+          {% set tipo_short = {
+            "RE_ASIGNACION": "IT-RE",
+            "DESCARGO": "IT-D",
+            "RE_ESTADO": "IT-RE",
+            "CAMBIO_ACTUALIZACION": "IT-CA",
+            "INSTALACION": "IT-I"
+          } %}
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:space-evenly;">
+          {% if ultimos_informes %}
+            {% for inf in ultimos_informes %}
+            {% set color = tipo_colors.get(inf.tipo, "#64748b") %}
+            {% set code  = tipo_short.get(inf.tipo, inf.tipo) %}
+            <div class="activity-item" style="flex:1;">
+              <div class="activity-dot" style="background:{{ color }};"></div>
+              <div style="flex:1;min-width:0;">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="activity-num">{{ inf.numero_informe }}</span>
+                  <span class="badge" style="background:{{ color }};font-size:.6rem;padding:2px 6px;">{{ code }}</span>
+                </div>
+                <div class="activity-who">{{ inf.nombres }}</div>
+              </div>
+              <div class="activity-time">
+                {{ inf.fecha_generacion.strftime('%d/%m/%Y') if inf.fecha_generacion else '' }}
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-4" style="color:#94a3b8;font-size:.82rem;">
+              <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+              Aún no hay informes generados.
+            </div>
+          {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="breakdown-card h-100 d-flex flex-column">
+          <div class="chart-card-title" style="margin-bottom:.9rem;">
+            <i class="bi bi-list-check" style="color:#d97706;"></i>
+            Desglose por Tipo
+          </div>
+          {% set tipo_full = {
+            "RE_ASIGNACION": "Revisión Asignación",
+            "DESCARGO": "Descargo",
+            "RE_ESTADO": "Revisión Estado",
+            "CAMBIO_ACTUALIZACION": "Cambio / Actualiz.",
+            "INSTALACION": "Instalación"
+          } %}
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:space-evenly;">
+          {% if grafico_tipo %}
+            {% set total_graf = grafico_tipo | sum(attribute='total') %}
+            {% for item in grafico_tipo %}
+              {% set pct = ((item.total / total_graf) * 100) | round(1) if total_graf > 0 else 0 %}
+              {% set color_map = {
+                "Revisión Asignación":"#2563eb","Descargo":"#d97706",
+                "Revisión Estado":"#059669","Cambio / Actualiz.":"#7c3aed","Instalación":"#0891b2"
+              } %}
+              {% set c = color_map.get(item.tipo, "#64748b") %}
+              <div class="breakdown-item" style="margin-bottom:0;">
+                <div class="breakdown-label">
+                  <span>{{ item.tipo }}</span>
+                  <span style="color:{{ c }};">{{ item.total }} ({{ pct }}%)</span>
+                </div>
+                <div class="breakdown-bar">
+                  <div class="breakdown-fill" style="width:{{ pct }}%;background:{{ c }};"></div>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-3" style="color:#94a3b8;font-size:.82rem;">
+              <i class="bi bi-bar-chart d-block mb-2 fs-4"></i>Sin datos disponibles.
+            </div>
+          {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      // Live date/time
+      function updateDateTime() {
+        const now  = new Date();
+        const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+        const meses = ['enero','febrero','marzo','abril','mayo','junio',
+                       'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        const h = now.getHours();
+        const greeting = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+        document.getElementById('greeting-text').textContent =
+          greeting + ', {{ session.get("nombres","").split()[0] }}';
+        document.getElementById('live-date').textContent =
+          dias[now.getDay()] + ', ' + now.getDate() + ' de ' + meses[now.getMonth()] +
+          ' de ' + now.getFullYear() + '  ·  ' +
+          String(now.getHours()).padStart(2,'0') + ':' +
+          String(now.getMinutes()).padStart(2,'0') + ':' +
+          String(now.getSeconds()).padStart(2,'0');
+      }
+      updateDateTime();
+      setInterval(updateDateTime, 1000);
+
+      // Count-up animation
+      document.querySelectorAll('.kpi-val[data-target]').forEach(el => {
+        const target = parseInt(el.dataset.target, 10);
+        if (target === 0) { el.textContent = '0'; return; }
+        const dur = 900, steps = 40, inc = Math.ceil(target / steps);
+        let cur = 0;
+        const t = setInterval(() => {
+          cur = Math.min(cur + inc, target);
+          el.textContent = cur.toLocaleString();
+          if (cur >= target) clearInterval(t);
+        }, dur / steps);
+      });
+
+      // Charts
+      Chart.defaults.font = { family: 'Inter, Arial, sans-serif', size: 12 };
+      const COLORS = ['#2563eb','#d97706','#059669','#7c3aed','#0891b2','#ef4444'];
+
+      const porTipo = JSON.parse('{{ grafico_tipo | tojson | safe }}');
+      const porMes  = JSON.parse('{{ grafico_mes  | tojson | safe }}');
+
+      // Bar chart with gradient
+      const barCtx = document.getElementById('graficoMes').getContext('2d');
+      const grad = barCtx.createLinearGradient(0, 0, 0, 220);
+      grad.addColorStop(0, 'rgba(37,99,235,.85)');
+      grad.addColorStop(1, 'rgba(37,99,235,.2)');
+      new Chart(barCtx, {
+        type: 'bar',
+        data: {
+          labels: porMes.map(r => r.mes),
+          datasets: [{
+            label: 'Informes',
+            data: porMes.map(r => r.total),
+            backgroundColor: grad,
+            borderRadius: 8,
+            borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          animation: { duration: 900, easing: 'easeOutQuart' },
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1, color: '#94a3b8' },
+              grid: { color: '#f1f5f9' },
+              border: { display: false }
+            },
+            x: {
+              ticks: { color: '#64748b' },
+              grid: { display: false },
+              border: { display: false }
+            }
+          }
+        }
+      });
+
+      // Doughnut
+      new Chart(document.getElementById('graficoTipo'), {
+        type: 'doughnut',
+        data: {
+          labels: porTipo.map(r => r.tipo),
+          datasets: [{
+            data: porTipo.map(r => r.total),
+            backgroundColor: COLORS,
+            borderWidth: 3,
+            borderColor: '#fff',
+            hoverOffset: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          animation: { animateRotate: true, duration: 900 },
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 11 } } }
+          },
+          cutout: '65%'
+        }
+      });
+    </script>
+
+  </main>
+</div>
+
+<!-- MODAL SELECCIÓN DE INFORME -->
+{% if show_modal %}
+<div class="modal fade" id="modalTipoInforme" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:16px;overflow:hidden;">
+
+      <div class="modal-header" style="background:linear-gradient(135deg,#1a3a6c,#2563eb);border:none;padding:1.5rem 2rem;">
+        <div>
+          <h5 class="modal-title text-white fw-bold mb-1">
+            <i class="bi bi-file-earmark-text me-2"></i>¿Qué informe desea generar?
+          </h5>
+          <p class="text-white mb-0" style="opacity:.8;font-size:.85rem;">
+            Bienvenido/a, <strong>{{ session.get("nombres","") }}</strong>. Seleccione el tipo de informe técnico.
+          </p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body" style="padding:2rem;background:#f8faff;">
+        <div class="row g-3 justify-content-center">
+
+          <div class="col-md-4 col-lg" style="min-width:180px;max-width:220px;">
+            <a href="/informe/revision-asignacion" class="text-decoration-none">
+              <div class="card h-100 border-0 shadow-sm" style="border-radius:12px;cursor:pointer;transition:transform .15s,box-shadow .15s;"
+                onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(37,99,235,.18)'"
+                onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <div class="card-body text-center py-4">
+                  <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#dbeafe,#bfdbfe);display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;">
+                    <i class="bi bi-pc-display-horizontal" style="font-size:1.5rem;color:#2563eb;"></i>
+                  </div>
+                  <div class="badge bg-primary mb-2" style="font-size:.68rem;">IT-RE</div>
+                  <h6 class="fw-bold mb-1" style="font-size:.82rem;color:#1e293b;line-height:1.4;">Revisión de equipo tecnológico</h6>
+                  <p class="text-muted mb-0" style="font-size:.74rem;">Disponible para asignación</p>
+                </div>
+                <div class="card-footer border-0 text-center py-2" style="background:#eff6ff;border-radius:0 0 12px 12px;">
+                  <span style="font-size:.74rem;color:#2563eb;font-weight:600;"><i class="bi bi-arrow-right-circle me-1"></i>Crear informe</span>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <div class="col-md-4 col-lg" style="min-width:180px;max-width:220px;">
+            <a href="/informe/descargo" class="text-decoration-none">
+              <div class="card h-100 border-0 shadow-sm" style="border-radius:12px;cursor:pointer;transition:transform .15s,box-shadow .15s;"
+                onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(245,158,11,.18)'"
+                onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <div class="card-body text-center py-4">
+                  <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;">
+                    <i class="bi bi-box-arrow-right" style="font-size:1.5rem;color:#d97706;"></i>
+                  </div>
+                  <div class="badge mb-2" style="background:#d97706;font-size:.68rem;">IT-D</div>
+                  <h6 class="fw-bold mb-1" style="font-size:.82rem;color:#1e293b;line-height:1.4;">Descargo de bien tecnológico</h6>
+                  <p class="text-muted mb-0" style="font-size:.74rem;">Retiro o baja de equipos</p>
+                </div>
+                <div class="card-footer border-0 text-center py-2" style="background:#fffbeb;border-radius:0 0 12px 12px;">
+                  <span style="font-size:.74rem;color:#d97706;font-weight:600;"><i class="bi bi-arrow-right-circle me-1"></i>Crear informe</span>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <div class="col-md-4 col-lg" style="min-width:180px;max-width:220px;">
+            <a href="/informe/revision-estado" class="text-decoration-none">
+              <div class="card h-100 border-0 shadow-sm" style="border-radius:12px;cursor:pointer;transition:transform .15s,box-shadow .15s;"
+                onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(16,185,129,.18)'"
+                onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <div class="card-body text-center py-4">
+                  <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#d1fae5,#a7f3d0);display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;">
+                    <i class="bi bi-clipboard2-pulse" style="font-size:1.5rem;color:#059669;"></i>
+                  </div>
+                  <div class="badge mb-2" style="background:#059669;font-size:.68rem;">IT-RE</div>
+                  <h6 class="fw-bold mb-1" style="font-size:.82rem;color:#1e293b;line-height:1.4;">Revisión de estado de bien</h6>
+                  <p class="text-muted mb-0" style="font-size:.74rem;">Evaluación técnica del equipo</p>
+                </div>
+                <div class="card-footer border-0 text-center py-2" style="background:#ecfdf5;border-radius:0 0 12px 12px;">
+                  <span style="font-size:.74rem;color:#059669;font-weight:600;"><i class="bi bi-arrow-right-circle me-1"></i>Crear informe</span>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <div class="col-md-4 col-lg" style="min-width:180px;max-width:220px;">
+            <a href="/informe/cambio-actualizacion" class="text-decoration-none">
+              <div class="card h-100 border-0 shadow-sm" style="border-radius:12px;cursor:pointer;transition:transform .15s,box-shadow .15s;"
+                onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(124,58,237,.18)'"
+                onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <div class="card-body text-center py-4">
+                  <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;">
+                    <i class="bi bi-arrow-repeat" style="font-size:1.5rem;color:#7c3aed;"></i>
+                  </div>
+                  <div class="badge mb-2" style="background:#7c3aed;font-size:.68rem;">IT-CA</div>
+                  <h6 class="fw-bold mb-1" style="font-size:.82rem;color:#1e293b;line-height:1.4;">Cambio y actualización de bien</h6>
+                  <p class="text-muted mb-0" style="font-size:.74rem;">Actualización tecnológica</p>
+                </div>
+                <div class="card-footer border-0 text-center py-2" style="background:#f5f3ff;border-radius:0 0 12px 12px;">
+                  <span style="font-size:.74rem;color:#7c3aed;font-weight:600;"><i class="bi bi-arrow-right-circle me-1"></i>Crear informe</span>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <div class="col-md-4 col-lg" style="min-width:180px;max-width:220px;">
+            <a href="/informe/instalacion" class="text-decoration-none">
+              <div class="card h-100 border-0 shadow-sm" style="border-radius:12px;cursor:pointer;transition:transform .15s,box-shadow .15s;"
+                onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(8,145,178,.18)'"
+                onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <div class="card-body text-center py-4">
+                  <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#cffafe,#a5f3fc);display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;">
+                    <i class="bi bi-tools" style="font-size:1.5rem;color:#0891b2;"></i>
+                  </div>
+                  <div class="badge mb-2" style="background:#0891b2;font-size:.68rem;">IT-I</div>
+                  <h6 class="fw-bold mb-1" style="font-size:.82rem;color:#1e293b;line-height:1.4;">Instalación de bien tecnológico</h6>
+                  <p class="text-muted mb-0" style="font-size:.74rem;">Instalación y configuración</p>
+                </div>
+                <div class="card-footer border-0 text-center py-2" style="background:#ecfeff;border-radius:0 0 12px 12px;">
+                  <span style="font-size:.74rem;color:#0891b2;font-weight:600;"><i class="bi bi-arrow-right-circle me-1"></i>Crear informe</span>
+                </div>
+              </div>
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal-footer" style="background:#f8faff;border-top:1px solid #e2e8f0;padding:.75rem 2rem;">
+        <small class="text-muted me-auto">
+          <i class="bi bi-info-circle me-1"></i>También puede acceder desde el menú lateral.
+        </small>
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-1"></i>Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    new bootstrap.Modal(document.getElementById('modalTipoInforme'),
+      { backdrop: 'static', keyboard: false }).show();
+  });
+</script>
+{% endif %}
+
+{% endblock %}

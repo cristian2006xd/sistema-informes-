@@ -1,0 +1,1031 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+
+  input[type="text"] { text-transform: uppercase; }
+
+</style>
+
+
+
+
+
+<div class="layout">
+
+
+
+  <aside class="sidebar">
+
+    <div class="sidebar-brand">
+
+      <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
+
+      <div class="sidebar-brand-name">INAMHI TICS</div>
+
+      <div class="sidebar-brand-sub">Sistema de Informes</div>
+
+    </div>
+
+    <div class="sidebar-user">
+
+      <div class="sidebar-avatar">{{ session.get("nombres","?")[:1] }}</div>
+
+      <div class="sidebar-user-info">
+
+        <div class="sidebar-user-name">{{ session.get("nombres","") }}</div>
+
+        <div class="sidebar-user-role">{{ session.get("rol","") }}</div>
+
+      </div>
+
+    </div>
+
+    <div class="sidebar-nav">
+
+      <div class="sidebar-section-label">Principal</div>
+
+      <a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+
+
+      {% if session["rol"] == "TECNICO" %}
+
+      <div class="sidebar-section-label">Informes</div>
+
+      <a href="/informe/revision-asignacion"><i class="bi bi-pc-display-horizontal"></i> Revisión (Asignación)</a>
+
+      <a href="/informe/descargo"><i class="bi bi-box-arrow-right"></i> Descargo</a>
+
+      <a href="/informe/revision-estado"><i class="bi bi-clipboard2-pulse"></i> Revisión (Estado)</a>
+
+      <a href="/informe/cambio-actualizacion" class="active"><i class="bi bi-arrow-repeat"></i> Cambio y Actualización</a>
+
+      <a href="/informe/instalacion"><i class="bi bi-tools"></i> Instalación</a>
+
+      {% endif %}
+
+
+
+      {% if session["rol"] in ["ADMINISTRADOR", "CONSULTA"] %}
+
+      <a href="/historial"><i class="bi bi-clock-history"></i> Historial</a>
+
+      {% endif %}
+
+
+
+      {% if session["rol"] == "ADMINISTRADOR" %}
+
+      <div class="sidebar-section-label">Sistema</div>
+
+      <a href="/usuarios"><i class="bi bi-people-fill"></i> Usuarios</a>
+
+      <a href="/auditoria"><i class="bi bi-shield-exclamation"></i> Auditoría</a>
+
+      <a href="/configuracion"><i class="bi bi-gear"></i> Configuración</a>
+
+      {% endif %}
+
+    </div>
+
+    <div class="sidebar-footer">
+
+      <a href="/logout" class="logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
+
+    </div>
+
+  </aside>
+
+
+
+  <main class="main-content">
+
+
+
+    <div class="page-header">
+
+      <h2><i class="bi bi-arrow-repeat"></i> Cambio y actualización de bien tecnológico</h2>
+
+      <p>Complete los campos resaltados. El texto fijo del informe se generará automáticamente.</p>
+
+    </div>
+
+
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+
+    {% if messages %}{% for cat,msg in messages %}
+
+    <div class="alert alert-{{ cat }} mb-3">{{ msg }}</div>
+
+    {% endfor %}{% endif %}
+
+    {% endwith %}
+
+
+
+    {% if modo_edicion is defined and modo_edicion %}
+
+    <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" style="font-size:.85rem;">
+
+      <i class="bi bi-pencil-square fs-5"></i>
+
+      <span>Modo edición — Informe <strong>{{ informe.numero_informe }}</strong>. Al guardar el Word se regenerará automáticamente.</span>
+
+    </div>
+
+    {% endif %}
+
+    <form method="POST"
+
+          action="{% if modo_edicion is defined and modo_edicion %}/historial/{{ informe_id }}/editar/guardar{% else %}/informe/cambio-actualizacion/generar{% endif %}"
+
+          enctype="multipart/form-data">
+
+
+
+      <!-- FECHA -->
+
+      <div class="card-info mb-4">
+
+        <div class="section-title"><i class="bi bi-calendar3"></i> Fecha del Informe</div>
+
+        <div class="row g-3">
+
+          <div class="col-md-3">
+
+            <label class="form-label">Fecha <span class="text-danger">*</span></label>
+
+            <input type="date" name="fecha" class="form-control" required
+
+                   value="{{ informe.fecha if (informe is defined and informe) else today }}">
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- FUNCIONARIO -->
+
+      <div class="card-info mb-4">
+
+        <div class="section-title"><i class="bi bi-person-badge"></i> Datos del Funcionario</div>
+
+        <div class="row g-3">
+
+          <div class="col-md-6">
+
+            <label class="form-label">Nombres y Apellidos <span class="text-danger">*</span></label>
+
+            <input type="text" name="nombres" class="form-control" placeholder="Nombres completos" required
+
+                   value="{{ informe.nombres if (informe is defined and informe) else '' }}">
+
+          </div>
+
+          <div class="col-md-3">
+
+            <label class="form-label">Cédula <span class="text-danger">*</span></label>
+
+            <input type="text" name="cedula" class="form-control" placeholder="0000000000" required
+
+                   value="{{ informe.cedula if (informe is defined and informe) else '' }}">
+
+          </div>
+
+          <div class="col-md-5">
+
+            <label class="form-label">Cargo <span class="text-danger">*</span></label>
+
+            <input type="text" name="cargo" class="form-control" placeholder="Cargo institucional" required
+
+                   value="{{ informe.cargo if (informe is defined and informe) else '' }}">
+
+          </div>
+
+          <div class="col-md-7">
+
+            <label class="form-label">Dirección / Dependencia <span class="text-danger">*</span></label>
+
+            <input type="text" name="direccion" class="form-control" placeholder="Dirección o nombre de la dependencia" required
+
+                   value="{{ informe.direccion if (informe is defined and informe) else '' }}">
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- BIENES -->
+
+      <div class="card-info mb-4">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+
+          <div class="section-title mb-0"><i class="bi bi-cpu"></i> Bienes Tecnológicos</div>
+
+          <button type="button" class="btn btn-sm text-white" style="background:#7c3aed;" onclick="agregarBien()">
+
+            <i class="bi bi-plus-lg me-1"></i> Agregar bien
+
+          </button>
+
+        </div>
+
+
+
+        <div id="bienes-container"></div>
+
+
+
+        <template id="bien-template">
+
+          <div class="bien-row card mb-3 border-0" style="background:#f5f3ff; border-radius:10px;">
+
+            <div class="card-body pb-2">
+
+              <div class="d-flex justify-content-between align-items-center mb-2">
+
+                <span class="fw-semibold" style="font-size:.85rem; color:#7c3aed;">
+
+                  <i class="bi bi-cpu me-1"></i> Bien #<span class="bien-num">1</span>
+
+                </span>
+
+                <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2" onclick="eliminarBien(this)">
+
+                  <i class="bi bi-trash"></i>
+
+                </button>
+
+              </div>
+
+              <div class="row g-2">
+
+                                <div class="col-md-4">
+
+                  <label class="form-label form-label-sm">Tipo de equipo</label>
+
+                  <select class="form-select form-select-sm" data-field="tipo_equipo" onchange="onSelectBien(this,'OTROS')">
+
+                    <option value="">-- Seleccione --</option>
+
+                    <option>CPU</option>
+
+                    <option>LAPTOP</option>
+
+                    <option>MONITOR</option>
+
+                    <option>MOUSE</option>
+
+                    <option>TECLADO</option>
+
+                    <option>IMPRESORA</option>
+
+                    <option>ESCÁNER</option>
+
+                    <option>UPS</option>
+
+                    <option>DOCKING STATION</option>
+
+                    <option>CÁMARA</option>
+
+                    <option>TELÉFONO IP</option>
+
+                    <option>PROYECTOR</option>
+
+                    <option>TABLET</option>
+
+                    <option value="OTROS">OTROS</option>
+
+                  </select>
+
+                  <input type="text" name="tipo_equipo[]" class="form-control form-control-sm mt-1 input-bien-custom"
+
+                         placeholder="ESPECIFIQUE TIPO DE EQUIPO" style="display:none">
+
+                </div>
+
+                                <div class="col-md-4">
+
+                  <label class="form-label form-label-sm">Marca</label>
+
+                  <select class="form-select form-select-sm" data-field="marca" onchange="onSelectBien(this,'OTRAS')">
+
+                    <option value="">-- Seleccione --</option>
+
+                    <option>DELL</option>
+
+                    <option>HP</option>
+
+                    <option>LENOVO</option>
+
+                    <option>ASUS</option>
+
+                    <option>ACER</option>
+
+                    <option>LG</option>
+
+                    <option>SAMSUNG</option>
+
+                    <option>GENIUS</option>
+
+                    <option>XTECH</option>
+
+                    <option>LOGITECH</option>
+
+                    <option>EPSON</option>
+
+                    <option>CANON</option>
+
+                    <option>BROTHER</option>
+
+                    <option value="OTRAS">OTRAS</option>
+
+                  </select>
+
+                  <input type="text" name="marca[]" class="form-control form-control-sm mt-1 input-bien-custom"
+
+                         placeholder="ESPECIFIQUE MARCA" style="display:none">
+
+                </div>
+
+                                <div class="col-md-4">
+
+                  <label class="form-label form-label-sm">Estado</label>
+
+                  <select class="form-select form-select-sm" name="estado_bien[]">
+
+                    <option value="">-- Seleccione --</option>
+
+                    <option>BUENO</option>
+
+                    <option>REGULAR</option>
+
+                    <option>MALO</option>
+
+                  </select>
+
+                </div>
+
+                <div class="col-md-4">
+
+                  <label class="form-label form-label-sm">Modelo</label>
+
+                  <input type="text" name="modelo[]" class="form-control form-control-sm" placeholder="Modelo">
+
+                </div>
+
+                <div class="col-md-4">
+
+                  <label class="form-label form-label-sm">Código ESBYE</label>
+
+                  <input type="text" name="codigo_esbye[]" class="form-control form-control-sm" placeholder="Código ESBYE">
+
+                </div>
+
+                <div class="col-md-4">
+
+                  <label class="form-label form-label-sm">Número de Serie</label>
+
+                  <input type="text" name="serie[]" class="form-control form-control-sm" placeholder="Serie">
+
+                </div>
+
+                <div class="col-md-4">
+
+                  <label class="form-label form-label-sm">Código Anterior</label>
+
+                  <input type="text" name="codigo_anterior[]" class="form-control form-control-sm" placeholder="Código patrimonial anterior">
+
+                </div>
+
+                <div class="col-md-8">
+
+                  <label class="form-label form-label-sm">
+
+                    <i class="bi bi-camera me-1"></i> Fotografías del bien
+
+                  </label>
+
+                  <input type="file" class="form-control form-control-sm bien-photos" name="fotos_bien_0[]" multiple accept="image/*" onchange="validarFotosBien(this)">
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </template>
+
+      </div>
+
+
+
+      <!-- FOTOGRAFÍAS GRUPO 1 -->
+
+      <div class="card-info mb-4">
+
+        <div class="section-title"><i class="bi bi-images"></i> Fotografías — Cambio y actualización</div>
+
+        <p class="text-muted mb-2" style="font-size:.85rem;">
+
+          Se insertan en el Word <strong>después del párrafo 1</strong> del desarrollo
+
+          (<em>"En atención al requerimiento realizado, se ejecutaron actividades de cambio y actualización..."</em>). Máximo <strong>1 foto</strong>.
+
+        </p>
+
+        <input type="file" name="fotos_grupo_1[]" class="form-control" accept="image/*"
+
+               onchange="validarFotosGrupo(this)">
+
+      </div>
+
+
+
+      <!-- CONCLUSIONES -->
+
+      <div class="card-info mb-4">
+
+        <div class="section-title">
+
+          <i class="bi bi-check2-circle"></i> 3. Conclusiones
+
+          <span class="badge bg-secondary ms-2" style="font-size:.7rem;">Vista previa automática</span>
+
+        </div>
+
+        <p class="text-muted mb-3" style="font-size:.82rem;">
+
+          Los campos resaltados en
+
+          <mark style="background:#fde68a;color:#92400e;padding:1px 4px;border-radius:3px;">amarillo</mark>
+
+          se actualizan al completar los datos del funcionario.
+
+        </p>
+
+        <div id="conclusiones-preview" class="p-3 rounded"
+
+             style="background:#fffef0;border:1px solid #fde68a;font-family:'Times New Roman',serif;
+
+                    font-size:.95rem;line-height:1.9;pointer-events:none;"></div>
+
+      </div>
+
+
+
+      <!-- FIRMA -->
+
+      <div class="card-info mb-4">
+
+        <div class="section-title"><i class="bi bi-pen-fill"></i> Elaborado / Aprobado</div>
+
+        <p class="text-muted mb-3" style="font-size:.82rem;">
+
+          Puede modificar los datos de firma para este informe. Si los deja vacíos se usarán los valores de Configuración del sistema.
+
+        </p>
+
+        <div class="row g-3">
+
+          <div class="col-md-6">
+
+            <div class="p-3 rounded" style="border:1px solid #bfdbfe;background:#f0f7ff;">
+
+              <div class="fw-bold mb-3" style="color:#1d4ed8;font-size:.85rem;">
+
+                <i class="bi bi-pencil-square me-1"></i> ELABORADO POR
+
+              </div>
+
+              <div class="mb-2">
+
+                <label class="form-label form-label-sm">Nombre / Título</label>
+
+                <input type="text" name="elaborado_nombre" class="form-control form-control-sm"
+
+                       placeholder="Ej: TÉCNICO DE TICS"
+
+                       value="{{ config.get('elaborado_nombre','') }}">
+
+              </div>
+
+              <div class="mb-3">
+
+                <label class="form-label form-label-sm">Cargo</label>
+
+                <input type="text" name="elaborado_cargo" class="form-control form-control-sm"
+
+                       placeholder="Ej: TÉCNICO"
+
+                       value="{{ config.get('elaborado_cargo','') }}">
+
+              </div>
+
+            </div>
+
+          </div>
+
+          <div class="col-md-6">
+
+            <div class="p-3 rounded" style="border:1px solid #a7f3d0;background:#f0fff8;">
+
+              <div class="fw-bold mb-3" style="color:#065f46;font-size:.85rem;">
+
+                <i class="bi bi-patch-check me-1"></i> APROBADO POR
+
+              </div>
+
+              <div class="mb-2">
+
+                <label class="form-label form-label-sm">Nombre / Título</label>
+
+                <input type="text" name="aprobado_nombre" class="form-control form-control-sm"
+
+                       placeholder="Ej: DIRECTOR/A DAF"
+
+                       value="{{ config.get('aprobado_nombre','') }}">
+
+              </div>
+
+              <div class="mb-3">
+
+                <label class="form-label form-label-sm">Cargo</label>
+
+                <input type="text" name="aprobado_cargo" class="form-control form-control-sm"
+
+                       placeholder="Ej: DIRECTOR/A"
+
+                       value="{{ config.get('aprobado_cargo','') }}">
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- SUBMIT -->
+
+      <div class="d-flex gap-2">
+
+        <button type="submit" id="btn-guardar" class="btn btn-lg text-white" style="background:#7c3aed;">
+
+          <i class="bi bi-floppy me-2"></i> Guardar
+
+        </button>
+
+        <a href="/dashboard" class="btn btn-secondary btn-lg">
+
+          <i class="bi bi-x-lg me-1"></i> Cancelar
+
+        </a>
+
+      </div>
+
+
+
+    </form>
+
+  </main>
+
+</div>
+
+
+
+<script>
+
+  const BIENES_PREFILL = {% if bienes is defined and bienes %}{{ bienes | tojson }}{% else %}null{% endif %};
+
+
+
+  function reindexBienes() {
+
+    document.querySelectorAll('.bien-row').forEach((row, idx) => {
+
+      row.querySelector('.bien-num').textContent = idx + 1;
+
+      const p = row.querySelector('.bien-photos');
+
+      if (p) p.name = `fotos_bien_${idx}[]`;
+
+    });
+
+  }
+
+    const TIPOS_EQUIPO = ['CPU','LAPTOP','MONITOR','MOUSE','TECLADO','IMPRESORA','ESCÁNER','UPS','DOCKING STATION','CÁMARA','TELÉFONO IP','PROYECTOR','TABLET'];
+
+  const MARCAS = ['DELL','HP','LENOVO','ASUS','ACER','LG','SAMSUNG','GENIUS','XTECH','LOGITECH','EPSON','CANON','BROTHER'];
+
+
+
+  function onSelectBien(sel, otrosVal) {
+
+    const inp = sel.parentElement.querySelector('.input-bien-custom');
+
+    if (sel.value === otrosVal) {
+
+      inp.style.display = '';
+
+      inp.value = '';
+
+      inp.focus();
+
+    } else {
+
+      inp.style.display = 'none';
+
+      inp.value = sel.value;
+
+    }
+
+  }
+
+
+
+  function setSelectBien(fragment, dataField, inputName, value, otrosVal, knownList) {
+
+    const sel = fragment.querySelector('[data-field="' + dataField + '"]');
+
+    const inp = fragment.querySelector('[name="' + inputName + '"]');
+
+    if (!sel || !inp) return;
+
+    const upper = (value || '').toUpperCase();
+
+    if (upper && knownList.includes(upper)) {
+
+      sel.value = upper;
+
+      inp.value = upper;
+
+      inp.style.display = 'none';
+
+    } else if (upper) {
+
+      sel.value = otrosVal;
+
+      inp.value = upper;
+
+      inp.style.display = '';
+
+    }
+
+  }
+
+
+
+  function agregarBien(b = null) {
+
+    const tmpl = document.getElementById('bien-template').content.cloneNode(true);
+
+    const container = document.getElementById('bienes-container');
+
+    const n = container.querySelectorAll('.bien-row').length;
+
+    tmpl.querySelector('.bien-num').textContent = n + 1;
+
+    tmpl.querySelector('.bien-photos').name = `fotos_bien_${n}[]`;
+
+    if (b) {
+
+      setSelectBien(tmpl, 'tipo_equipo', 'tipo_equipo[]', b.tipo_equipo, 'OTROS', TIPOS_EQUIPO);
+
+      setSelectBien(tmpl, 'marca',       'marca[]',       b.marca,       'OTRAS', MARCAS);
+
+      const estadoSel = tmpl.querySelector('select[name="estado_bien[]"]');
+
+      if (estadoSel && b.estado_bien) estadoSel.value = b.estado_bien.toUpperCase();
+
+      const f = (name, val) => { const el = tmpl.querySelector(`[name="${name}"]`); if (el) el.value = val || ''; };
+
+      f('modelo[]', b.modelo); f('codigo_esbye[]', b.codigo_esbye);
+
+      f('serie[]', b.serie); f('codigo_anterior[]', b.codigo_anterior);
+
+    }
+
+    container.appendChild(tmpl);
+
+  }
+
+  function eliminarBien(btn) {
+
+    if (document.querySelectorAll('.bien-row').length <= 1) return;
+
+    btn.closest('.bien-row').remove();
+
+    reindexBienes();
+
+  }
+
+
+
+  // ── Conclusiones en tiempo real ──────────────────────────────────────────────
+
+  const CONCLUSION_TEMPLATE = [
+
+    'Las actividades ejecutadas permitieron optimizar las condiciones de uso y ' +
+
+    'desempeño del bien tecnológico, asegurando su adecuada utilización dentro ' +
+
+    'del entorno institucional.',
+
+    'Como resultado de las acciones efectuadas, se realizó la actualización y ' +
+
+    'configuración del bien tecnológico asignado a {NOMBRES}, en su calidad ' +
+
+    'de {CARGO} de la {DIRECCION}, quedando disponible para el cumplimiento ' +
+
+    'de sus funciones institucionales.'
+
+  ];
+
+  const HL  = '<mark style="background:#fde68a;color:#92400e;padding:1px 3px;border-radius:3px;font-weight:bold;">';
+
+  const HLC = '</mark>';
+
+
+
+  function updateConclusiones() {
+
+    const nombres   = document.querySelector('[name="nombres"]').value.trim()   || '<i style="opacity:.5">NOMBRES</i>';
+
+    const cargo     = document.querySelector('[name="cargo"]').value.trim()     || '<i style="opacity:.5">CARGO</i>';
+
+    const direccion = document.querySelector('[name="direccion"]').value.trim() || '<i style="opacity:.5">DIRECCIÓN</i>';
+
+    document.getElementById('conclusiones-preview').innerHTML =
+
+      CONCLUSION_TEMPLATE.map(t =>
+
+        '<p style="margin:0 0 .6em;text-align:justify;">' +
+
+        t.replace('{NOMBRES}',   HL + nombres   + HLC)
+
+         .replace('{CARGO}',     HL + cargo     + HLC)
+
+         .replace('{DIRECCION}', HL + direccion + HLC) +
+
+        '</p>'
+
+      ).join('');
+
+  }
+
+
+
+  ['nombres','cargo','direccion'].forEach(n =>
+
+    document.querySelector(`[name="${n}"]`).addEventListener('input', updateConclusiones)
+
+  );
+
+
+
+  function validarFotosGrupo(input) {
+
+    if (input.files.length > 1) {
+
+      alert('Solo se permite máximo 1 fotografía.');
+
+      input.value = '';
+
+    }
+
+  }
+
+
+
+  function validarFotosBien(input) {
+
+    if (input.files.length > 4) {
+
+      mostrarModalLimiteBien();
+
+      input.value = '';
+
+    }
+
+  }
+
+
+
+  function mostrarModalLimiteBien() {
+
+    if (document.getElementById('modalLimiteFotos')) return;
+
+    const m = document.createElement('div');
+
+    m.id = 'modalLimiteFotos';
+
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+    m.innerHTML = `
+
+      <div style="background:#fff;border-radius:18px;padding:2rem 2.2rem;max-width:360px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.22);">
+
+        <div style="width:64px;height:64px;background:#fef3c7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+
+          <svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' fill='#d97706' viewBox='0 0 16 16'>
+
+            <path d='M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z'/>
+
+          </svg>
+
+        </div>
+
+        <h5 style='font-weight:700;color:#1e293b;margin-bottom:.4rem;'>Límite de fotografías</h5>
+
+        <p style='color:#64748b;font-size:.9rem;margin-bottom:1.4rem;'>Solo se permiten <strong>máximo 4 fotografías</strong> por bien tecnológico.</p>
+
+        <button onclick="document.getElementById('modalLimiteFotos').remove()"
+
+                style='background:#d97706;color:#fff;border:none;border-radius:10px;padding:.5rem 1.8rem;font-weight:600;cursor:pointer;font-size:.95rem;'>
+
+          Entendido
+
+        </button>
+
+      </div>`;
+
+    document.body.appendChild(m);
+
+  }
+
+
+
+  document.querySelector('form').addEventListener('submit', async function(e) {
+
+    const modoEdicion = this.action.includes('/editar/guardar');
+
+    if (modoEdicion) return;
+
+
+
+    e.preventDefault();
+
+    const btn = document.getElementById('btn-guardar');
+
+    const orig = btn.innerHTML;
+
+    btn.disabled = true;
+
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Procesando...';
+
+    try {
+
+      const resp = await fetch(this.action, {
+
+        method: 'POST',
+
+        headers: { 'Accept': 'application/json' },
+
+        body: new FormData(this),
+
+      });
+
+      const data = await resp.json();
+
+      if (data.ok) {
+
+        document.getElementById('btn-ver-doc').href = '/historial/' + data.id + '/descargar-pdf';
+
+        new bootstrap.Modal(document.getElementById('modalExito')).show();
+
+      } else {
+
+        alert('Error: ' + (data.error || 'No se pudo generar el informe.'));
+
+      }
+
+    } catch(err) {
+
+      alert('Error de conexión: ' + err.message);
+
+    } finally {
+
+      btn.disabled = false;
+
+      btn.innerHTML = orig;
+
+    }
+
+  });
+
+
+
+  document.addEventListener('DOMContentLoaded', () => {
+
+    if (BIENES_PREFILL && BIENES_PREFILL.length > 0) {
+
+      BIENES_PREFILL.forEach(b => agregarBien(b));
+
+    } else {
+
+      agregarBien();
+
+    }
+
+    document.querySelectorAll('input[type="text"]').forEach(el => { el.value = el.value.toUpperCase(); });
+
+    updateConclusiones();
+
+  });
+
+
+
+  document.addEventListener('input', function(e) {
+
+    if (e.target.matches('input[type="text"]')) {
+
+      var s = e.target.selectionStart, end = e.target.selectionEnd;
+
+      e.target.value = e.target.value.toUpperCase();
+
+      e.target.setSelectionRange(s, end);
+
+    }
+
+  });
+
+</script>
+
+
+
+<!-- MODAL ÉXITO -->
+
+<div class="modal fade" id="modalExito" tabindex="-1" aria-modal="true" aria-labelledby="modalExitoLabel">
+
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+
+    <div class="modal-content" style="border-radius:20px;border:none;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.18);">
+
+      <div style="background:linear-gradient(135deg,#0f766e 0%,#0891b2 100%);padding:2.2rem 2rem 1.6rem;text-align:center;">
+
+        <div style="width:72px;height:72px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;border:3px solid rgba(255,255,255,.35);">
+
+          <i class="bi bi-check2" style="font-size:2.2rem;color:#fff;"></i>
+
+        </div>
+
+        <h5 id="modalExitoLabel" style="color:#fff;font-weight:700;margin:0;font-size:1.1rem;">¡Documento generado exitosamente!</h5>
+
+        <p style="color:rgba(255,255,255,.8);font-size:.82rem;margin:.5rem 0 0;">El informe técnico fue procesado correctamente.</p>
+
+      </div>
+
+      <div class="modal-body text-center" style="padding:1.2rem 2rem 1.6rem;">
+
+        <div class="d-flex gap-2 justify-content-center">
+
+          <a id="btn-ver-doc" href="#"
+             target="_blank"
+
+             class="btn btn-primary d-flex align-items-center gap-2"
+
+             style="border-radius:10px;padding:.55rem 1.4rem;font-weight:600;">
+
+            <i class="bi bi-file-earmark-pdf"></i> Ver documento
+
+          </a>
+
+          <button type="button" class="btn btn-outline-secondary"
+
+                  data-bs-dismiss="modal"
+
+                  style="border-radius:10px;padding:.55rem 1.2rem;">
+
+            Cerrar
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}
+

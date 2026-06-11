@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
+            <div class="sidebar-brand-name">INAMHI TICS</div>
+            <div class="sidebar-brand-sub">Sistema de Informes</div>
+        </div>
+        <div class="sidebar-user">
+            <div class="sidebar-avatar">{{ session.get("nombres", "?")[:1] }}</div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name">{{ session.get("nombres", "") }}</div>
+                <div class="sidebar-user-role">{{ session.get("rol", "") }}</div>
+            </div>
+        </div>
+        <div class="sidebar-nav">
+            <div class="sidebar-section-label">Principal</div>
+            <a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+            {% if session["rol"] == "ADMINISTRADOR" %}
+            <div class="sidebar-section-label">Administración</div>
+            <a href="/usuarios"><i class="bi bi-people-fill"></i> Usuarios</a>
+            {% endif %}
+
+            {% if session["rol"] in ["ADMINISTRADOR", "TECNICO"] %}
+            <div class="sidebar-section-label">Gestión</div>
+            <a href="/funcionarios" class="active"><i class="bi bi-person-badge"></i> Funcionarios</a>
+            <a href="/bienes"><i class="bi bi-cpu"></i> Bienes</a>
+            <a href="/informes"><i class="bi bi-file-earmark-text"></i> Informes</a>
+            <a href="/documentos"><i class="bi bi-folder2-open"></i> Documentos</a>
+            {% endif %}
+
+            {% if session["rol"] == "ADMINISTRADOR" %}
+            <div class="sidebar-section-label">Sistema</div>
+            <a href="/auditoria"><i class="bi bi-shield-exclamation"></i> Auditoría</a>
+            <a href="/respaldos"><i class="bi bi-cloud-arrow-up"></i> Respaldos</a>
+            <a href="/configuracion"><i class="bi bi-gear"></i> Configuración</a>
+            {% endif %}
+        </div>
+        <div class="sidebar-footer">
+            <a href="/logout" class="logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <div class="page-header">
+            <h2><i class="bi bi-person-badge"></i> Gestión de Funcionarios</h2>
+            <p>Registro de funcionarios institucionales del INAMHI.</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- FORMULARIO -->
+        <div class="card-info mb-4">
+            <div class="section-title">
+                <i class="bi bi-person-plus-fill"></i> Crear Nuevo Funcionario
+            </div>
+
+            <form method="POST" action="/funcionarios/crear">
+                <div class="row">
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Cédula</label>
+                        <input type="text" name="cedula" maxlength="10" class="form-control" placeholder="0000000000" required>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Nombres</label>
+                        <input type="text" name="nombres" class="form-control" required>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Apellidos</label>
+                        <input type="text" name="apellidos" class="form-control" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Cargo</label>
+                        <input type="text" name="cargo" class="form-control">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Dependencia</label>
+                        <input type="text" name="dependencia" class="form-control">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Ubicación Física</label>
+                        <input type="text" name="ubicacion_fisica" class="form-control">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Teléfono</label>
+                        <input type="text" name="telefono" class="form-control">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Correo</label>
+                        <input type="email" name="correo" class="form-control">
+                    </div>
+                    <div class="col-md-3 mb-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-save me-1"></i> Guardar Funcionario
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- TABLA -->
+        <div class="card-info">
+            <div class="section-title">
+                <i class="bi bi-list-ul"></i> Lista de Funcionarios
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Cédula</th>
+                            <th>Nombres</th>
+                            <th>Cargo</th>
+                            <th>Dependencia</th>
+                            <th>Ubicación</th>
+                            <th>Correo</th>
+                            <th>Teléfono</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in funcionarios %}
+                        <tr>
+                            <td><span class="text-muted">#{{ f.id }}</span></td>
+                            <td>{{ f.cedula }}</td>
+                            <td><strong>{{ f.nombres }} {{ f.apellidos }}</strong></td>
+                            <td>{{ f.cargo }}</td>
+                            <td>{{ f.dependencia }}</td>
+                            <td>{{ f.ubicacion_fisica }}</td>
+                            <td>{{ f.correo }}</td>
+                            <td>{{ f.telefono }}</td>
+                            <td>
+                                {% if f.estado == 'ACTIVO' %}
+                                <span class="badge bg-success">ACTIVO</span>
+                                {% else %}
+                                <span class="badge bg-danger">INACTIVO</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:0.3;"></i>
+                                No existen funcionarios registrados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+</div>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
+            <div class="sidebar-brand-name">INAMHI TICS</div>
+            <div class="sidebar-brand-sub">Sistema de Informes</div>
+        </div>
+        <div class="sidebar-user">
+            <div class="sidebar-avatar">{{ session.get("nombres", "?")[:1] }}</div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name">{{ session.get("nombres", "") }}</div>
+                <div class="sidebar-user-role">{{ session.get("rol", "") }}</div>
+            </div>
+        </div>
+        <div class="sidebar-nav">
+            <div class="sidebar-section-label">Principal</div>
+            <a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+            {% if session["rol"] == "ADMINISTRADOR" %}
+            <div class="sidebar-section-label">Administración</div>
+            <a href="/usuarios"><i class="bi bi-people-fill"></i> Usuarios</a>
+            {% endif %}
+
+            {% if session["rol"] in ["ADMINISTRADOR", "TECNICO"] %}
+            <div class="sidebar-section-label">Gestión</div>
+            <a href="/funcionarios"><i class="bi bi-person-badge"></i> Funcionarios</a>
+            <a href="/bienes"><i class="bi bi-cpu"></i> Bienes</a>
+            <a href="/informes"><i class="bi bi-file-earmark-text"></i> Informes</a>
+            <a href="/documentos"><i class="bi bi-folder2-open"></i> Documentos</a>
+            {% endif %}
+
+            {% if session["rol"] == "ADMINISTRADOR" %}
+            <div class="sidebar-section-label">Sistema</div>
+            <a href="/auditoria"><i class="bi bi-shield-exclamation"></i> Auditoría</a>
+            <a href="/respaldos" class="active"><i class="bi bi-cloud-arrow-up"></i> Respaldos</a>
+            <a href="/configuracion"><i class="bi bi-gear"></i> Configuración</a>
+            {% endif %}
+        </div>
+        <div class="sidebar-footer">
+            <a href="/logout" class="logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <div class="page-header">
+            <h2><i class="bi bi-cloud-arrow-up"></i> Respaldos Institucionales</h2>
+            <p>Generación, descarga y restauración de respaldos de la base de datos.</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- ACCIONES -->
+        <div class="card-info mb-4">
+            <div class="section-title">
+                <i class="bi bi-cloud-plus-fill"></i> Generar Respaldo Manual
+            </div>
+
+            <p class="text-muted mb-3" style="font-size:0.875rem;">
+                Esta acción generará un archivo SQL de respaldo completo de la base de datos actual del sistema.
+            </p>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="/respaldos/generar"
+                   class="btn btn-primary"
+                   onclick="return confirm('¿Deseas generar un nuevo respaldo de la base de datos?')">
+                    <i class="bi bi-cloud-arrow-up-fill me-1"></i> Generar respaldo ahora
+                </a>
+
+                <a href="/respaldos/eliminar-vacios"
+                   class="btn btn-danger"
+                   onclick="return confirm('¿Deseas eliminar todos los respaldos vacíos (0 KB)?')">
+                    <i class="bi bi-trash me-1"></i> Eliminar respaldos vacíos
+                </a>
+            </div>
+        </div>
+
+        <!-- HISTORIAL -->
+        <div class="card-info">
+            <div class="section-title">
+                <i class="bi bi-archive"></i> Historial de Respaldos
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Archivo</th>
+                            <th>Fecha</th>
+                            <th>Tamaño</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for archivo in archivos %}
+                        <tr>
+                            <td><span class="text-muted">{{ loop.index }}</span></td>
+                            <td>
+                                <i class="bi bi-file-earmark-zip text-muted me-1"></i>
+                                <strong style="font-size:0.82rem;">{{ archivo.nombre }}</strong>
+                            </td>
+                            <td>{{ archivo.fecha }}</td>
+                            <td>
+                                {% if archivo.peso == 0 %}
+                                <span class="badge bg-danger">0 KB — Vacío</span>
+                                {% else %}
+                                <span class="badge bg-success">{{ archivo.peso }} KB</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <a href="/respaldos/descargar/{{ archivo.nombre }}" class="btn btn-success btn-sm">
+                                        <i class="bi bi-download"></i> Descargar
+                                    </a>
+
+                                    {% if archivo.peso > 0 %}
+                                    <a href="/respaldos/restaurar/{{ archivo.nombre }}"
+                                       class="btn btn-warning btn-sm"
+                                       onclick="return confirm('¿Restaurar este respaldo? Esta acción reemplazará los datos actuales.')">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Restaurar
+                                    </a>
+                                    {% else %}
+                                    <button class="btn btn-secondary btn-sm" disabled>
+                                        <i class="bi bi-slash-circle"></i> No restaurable
+                                    </button>
+                                    {% endif %}
+
+                                    <a href="/respaldos/eliminar/{{ archivo.nombre }}"
+                                       class="btn btn-outline-danger btn-sm"
+                                       onclick="return confirm('¿Eliminar este respaldo? Esta acción no se puede deshacer.')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:0.3;"></i>
+                                No existen respaldos generados todavía.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+</div>
+{% endblock %}

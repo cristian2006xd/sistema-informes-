@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .img-upload-card {
+    border: 2px dashed #cbd5e1;
+    border-radius: 14px;
+    background: #f8faff;
+    padding: 1.4rem;
+    transition: border-color .2s, background .2s;
+    cursor: pointer;
+  }
+  .img-upload-card:hover { border-color: #2563eb; background: #eff6ff; }
+  .img-upload-card.has-img { border-style: solid; border-color: #bfdbfe; background: #fff; }
+  .img-preview {
+    width: 100%; max-height: 120px; object-fit: contain;
+    border-radius: 8px; margin-bottom: .75rem;
+    border: 1px solid #e2e8f0;
+  }
+  .upload-placeholder {
+    text-align: center; padding: 1.5rem 0;
+    color: #94a3b8;
+  }
+  .upload-placeholder i { font-size: 2.2rem; display: block; margin-bottom: .4rem; }
+  .upload-placeholder span { font-size: .78rem; }
+  .upload-label {
+    font-size: .72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: #374151; margin-bottom: .6rem;
+    display: flex; align-items: center; gap: .35rem;
+  }
+  .file-input-wrapper { position: relative; }
+  .file-input-wrapper input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
+  }
+  .file-btn {
+    display: flex; align-items: center; gap: .4rem;
+    font-size: .75rem; padding: 5px 12px; border-radius: 7px;
+    border: 1px solid #cbd5e1; background: #fff; color: #374151;
+    cursor: pointer; transition: background .15s;
+  }
+  .file-btn:hover { background: #f1f5f9; }
+  .badge-current {
+    font-size: .65rem; background: #dcfce7; color: #16a34a;
+    border-radius: 10px; padding: 2px 8px; font-weight: 600;
+  }
+  .badge-none {
+    font-size: .65rem; background: #f1f5f9; color: #64748b;
+    border-radius: 10px; padding: 2px 8px; font-weight: 600;
+  }
+</style>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
+      <div class="sidebar-brand-name">INAMHI TICS</div>
+      <div class="sidebar-brand-sub">Sistema de Informes</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-avatar">{{ session.get("nombres","?")[:1] }}</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">{{ session.get("nombres","") }}</div>
+        <div class="sidebar-user-role">{{ session.get("rol","") }}</div>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+      {% if session["rol"] == "TECNICO" %}
+      <div class="sidebar-section-label">Informes</div>
+      <a href="/informe/revision-asignacion"><i class="bi bi-pc-display-horizontal"></i> Revisión (Asignación)</a>
+      <a href="/informe/descargo"><i class="bi bi-box-arrow-right"></i> Descargo</a>
+      <a href="/informe/revision-estado"><i class="bi bi-clipboard2-pulse"></i> Revisión (Estado)</a>
+      <a href="/informe/cambio-actualizacion"><i class="bi bi-arrow-repeat"></i> Cambio y Actualización</a>
+      <a href="/informe/instalacion"><i class="bi bi-tools"></i> Instalación</a>
+      {% endif %}
+
+      {% if session["rol"] in ["ADMINISTRADOR", "CONSULTA"] %}
+      <a href="/historial"><i class="bi bi-clock-history"></i> Historial</a>
+      {% endif %}
+
+      {% if session["rol"] == "ADMINISTRADOR" %}
+      <div class="sidebar-section-label">Sistema</div>
+      <a href="/usuarios"><i class="bi bi-people-fill"></i> Usuarios</a>
+      <a href="/auditoria"><i class="bi bi-shield-exclamation"></i> Auditoría</a>
+      <a href="/configuracion" class="active"><i class="bi bi-gear"></i> Configuración</a>
+      {% endif %}
+    </div>
+    <div class="sidebar-footer">
+      <a href="/logout" class="logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <div class="page-header">
+      <h2><i class="bi bi-gear"></i> Configuración del Sistema</h2>
+      <p>Imágenes y datos institucionales que aparecen en los informes Word generados.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat,msg in messages %}
+    <div class="alert alert-{{ cat }} mb-3">{{ msg }}</div>
+    {% endfor %}{% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/configuracion" enctype="multipart/form-data">
+
+      <!-- IMÁGENES DEL INFORME -->
+      <div class="card-info mb-4">
+        <div class="section-title"><i class="bi bi-image"></i> Imágenes del Informe Word</div>
+        <p class="text-muted mb-4" style="font-size:.82rem;">
+          Sube una imagen para el <strong>encabezado</strong> y otra para el <strong>pie de página</strong>.
+          Se usarán tal como aparecen en el documento Word generado. Formatos: PNG, JPG.
+        </p>
+
+        <div class="row g-4">
+
+          <!-- ENCABEZADO -->
+          <div class="col-md-6">
+            {% set enc = config.get('imagen_encabezado','') %}
+            <div class="upload-label">
+              <i class="bi bi-layout-text-window" style="color:#2563eb;"></i>
+              Encabezado
+              {% if enc %}
+              <span class="badge-current ms-auto">Imagen cargada</span>
+              {% else %}
+              <span class="badge-none ms-auto">Sin imagen</span>
+              {% endif %}
+            </div>
+            <div class="img-upload-card {% if enc %}has-img{% endif %}" id="wrap-enc"
+                 onclick="document.getElementById('file-enc').click()">
+              {% if enc %}
+              <img src="/{{ enc }}" class="img-preview" id="prev-enc" alt="Encabezado actual">
+              {% else %}
+              <div class="upload-placeholder" id="placeholder-enc">
+                <i class="bi bi-cloud-arrow-up"></i>
+                <span>Haz clic para subir la imagen del encabezado</span>
+              </div>
+              {% endif %}
+            </div>
+            <div class="d-flex align-items-center gap-2 mt-2">
+              <div class="file-input-wrapper">
+                <div class="file-btn">
+                  <i class="bi bi-upload"></i> Seleccionar archivo
+                </div>
+                <input type="file" name="imagen_encabezado" id="file-enc"
+                       accept="image/png,image/jpeg"
+                       onchange="previewImg(this,'prev-enc','placeholder-enc','wrap-enc')">
+              </div>
+              <span id="name-enc" style="font-size:.72rem;color:#64748b;"></span>
+            </div>
+          </div>
+
+          <!-- PIE DE PÁGINA -->
+          <div class="col-md-6">
+            {% set pie = config.get('imagen_pie_pagina','') %}
+            <div class="upload-label">
+              <i class="bi bi-layout-text-window-reverse" style="color:#059669;"></i>
+              Pie de Página
+              {% if pie %}
+              <span class="badge-current ms-auto">Imagen cargada</span>
+              {% else %}
+              <span class="badge-none ms-auto">Sin imagen</span>
+              {% endif %}
+            </div>
+            <div class="img-upload-card {% if pie %}has-img{% endif %}" id="wrap-pie"
+                 onclick="document.getElementById('file-pie').click()">
+              {% if pie %}
+              <img src="/{{ pie }}" class="img-preview" id="prev-pie" alt="Pie de página actual">
+              {% else %}
+              <div class="upload-placeholder" id="placeholder-pie">
+                <i class="bi bi-cloud-arrow-up"></i>
+                <span>Haz clic para subir la imagen del pie de página</span>
+              </div>
+              {% endif %}
+            </div>
+            <div class="d-flex align-items-center gap-2 mt-2">
+              <div class="file-input-wrapper">
+                <div class="file-btn">
+                  <i class="bi bi-upload"></i> Seleccionar archivo
+                </div>
+                <input type="file" name="imagen_pie_pagina" id="file-pie"
+                       accept="image/png,image/jpeg"
+                       onchange="previewImg(this,'prev-pie','placeholder-pie','wrap-pie')">
+              </div>
+              <span id="name-pie" style="font-size:.72rem;color:#64748b;"></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ELABORADO / APROBADO -->
+      <div class="card-info mb-4">
+        <div class="section-title"><i class="bi bi-person-vcard"></i> Sección ELABORADO / APROBADO</div>
+        <p class="text-muted mb-3" style="font-size:.82rem;">
+          Datos que aparecen en la tabla de firmas al final del informe.
+        </p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="p-3 rounded" style="border:1px solid #bfdbfe;background:#f0f7ff;">
+              <div class="fw-bold mb-3" style="color:#1d4ed8;font-size:.82rem;">
+                <i class="bi bi-pencil-square me-1"></i> ELABORADO POR
+              </div>
+              <div class="mb-2">
+                <label class="form-label form-label-sm fw-semibold text-secondary">Nombre / Título</label>
+                <input type="text" name="elaborado_nombre" class="form-control form-control-sm"
+                       value="{{ config.get('elaborado_nombre','') }}" placeholder="Ej: TÉCNICO DE TICS">
+              </div>
+              <div>
+                <label class="form-label form-label-sm fw-semibold text-secondary">Cargo</label>
+                <input type="text" name="elaborado_cargo" class="form-control form-control-sm"
+                       value="{{ config.get('elaborado_cargo','') }}" placeholder="Ej: TÉCNICO">
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 rounded" style="border:1px solid #a7f3d0;background:#f0fff8;">
+              <div class="fw-bold mb-3" style="color:#065f46;font-size:.82rem;">
+                <i class="bi bi-patch-check me-1"></i> APROBADO POR
+              </div>
+              <div class="mb-2">
+                <label class="form-label form-label-sm fw-semibold text-secondary">Nombre / Título</label>
+                <input type="text" name="aprobado_nombre" class="form-control form-control-sm"
+                       value="{{ config.get('aprobado_nombre','') }}" placeholder="Ej: DIRECTOR/A DAF">
+              </div>
+              <div>
+                <label class="form-label form-label-sm fw-semibold text-secondary">Cargo</label>
+                <input type="text" name="aprobado_cargo" class="form-control form-control-sm"
+                       value="{{ config.get('aprobado_cargo','') }}" placeholder="Ej: DIRECTOR/A">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-floppy me-1"></i> Guardar configuración
+        </button>
+        <a href="/dashboard" class="btn btn-secondary">
+          <i class="bi bi-x-lg me-1"></i> Cancelar
+        </a>
+      </div>
+
+    </form>
+
+  </main>
+</div>
+
+<script>
+  function previewImg(input, prevId, placeholderId, wrapId) {
+    const wrap = document.getElementById(wrapId);
+    const nameSpan = input.id === 'file-enc'
+      ? document.getElementById('name-enc')
+      : document.getElementById('name-pie');
+
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+    nameSpan.textContent = file.name;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      let img = document.getElementById(prevId);
+      const ph  = document.getElementById(placeholderId);
+
+      if (!img) {
+        img = document.createElement('img');
+        img.id = prevId;
+        img.className = 'img-preview';
+        img.alt = 'Vista previa';
+        if (ph) ph.replaceWith(img);
+        else wrap.insertBefore(img, wrap.firstChild);
+      }
+      img.src = e.target.result;
+      wrap.classList.add('has-img');
+      wrap.style.borderStyle = 'solid';
+      wrap.style.borderColor = '#bfdbfe';
+      wrap.style.background  = '#fff';
+    };
+    reader.readAsDataURL(file);
+  }
+</script>
+
+{% endblock %}

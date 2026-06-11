@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
+            <div class="sidebar-brand-name">INAMHI TICS</div>
+            <div class="sidebar-brand-sub">Sistema de Informes</div>
+        </div>
+        <div class="sidebar-user">
+            <div class="sidebar-avatar">{{ session.get("nombres", "?")[:1] }}</div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name">{{ session.get("nombres", "") }}</div>
+                <div class="sidebar-user-role">{{ session.get("rol", "") }}</div>
+            </div>
+        </div>
+        <div class="sidebar-nav">
+            <div class="sidebar-section-label">Principal</div>
+            <a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+            {% if session["rol"] == "ADMINISTRADOR" %}
+            <div class="sidebar-section-label">Administración</div>
+            <a href="/usuarios"><i class="bi bi-people-fill"></i> Usuarios</a>
+            {% endif %}
+
+            {% if session["rol"] in ["ADMINISTRADOR", "TECNICO"] %}
+            <div class="sidebar-section-label">Gestión</div>
+            <a href="/funcionarios"><i class="bi bi-person-badge"></i> Funcionarios</a>
+            <a href="/bienes"><i class="bi bi-cpu"></i> Bienes</a>
+            <a href="/informes" class="active"><i class="bi bi-file-earmark-text"></i> Informes</a>
+            <a href="/documentos"><i class="bi bi-folder2-open"></i> Documentos</a>
+            {% endif %}
+
+            {% if session["rol"] == "ADMINISTRADOR" %}
+            <div class="sidebar-section-label">Sistema</div>
+            <a href="/auditoria"><i class="bi bi-shield-exclamation"></i> Auditoría</a>
+            <a href="/respaldos"><i class="bi bi-cloud-arrow-up"></i> Respaldos</a>
+            <a href="/configuracion"><i class="bi bi-gear"></i> Configuración</a>
+            {% endif %}
+        </div>
+        <div class="sidebar-footer">
+            <a href="/logout" class="logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <div class="page-header">
+            <h2><i class="bi bi-file-earmark-text"></i> Gestión de Informes</h2>
+            <p>Creación y registro de informes técnicos de bienes tecnológicos.</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- FORMULARIO -->
+        <div class="card-info mb-4">
+            <div class="section-title">
+                <i class="bi bi-plus-circle-fill"></i> Crear Nuevo Informe
+            </div>
+
+            <form method="POST" action="/informes/crear">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Funcionario</label>
+                        <select name="funcionario_id" class="form-select" required>
+                            <option value="">Seleccione un funcionario...</option>
+                            {% for f in funcionarios %}
+                            <option value="{{ f.id }}">{{ f.nombres }} {{ f.apellidos }} — {{ f.cargo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tipo de Informe</label>
+                        <select name="tipo_informe_id" class="form-select" required>
+                            <option value="">Seleccione un tipo...</option>
+                            {% for t in tipos_informes %}
+                            <option value="{{ t.id }}">{{ t.codigo }} — {{ t.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Antecedentes</label>
+                        <textarea name="antecedentes" class="form-control" rows="4" placeholder="Descripción de antecedentes..."></textarea>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Desarrollo</label>
+                        <textarea name="desarrollo" class="form-control" rows="4" placeholder="Descripción del desarrollo..."></textarea>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="4" placeholder="Observaciones adicionales..."></textarea>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Conclusiones</label>
+                        <textarea name="conclusiones" class="form-control" rows="4" placeholder="Conclusiones del informe..."></textarea>
+                    </div>
+
+                    <div class="col-md-3 mb-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-save me-1"></i> Guardar Informe
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- TABLA -->
+        <div class="card-info">
+            <div class="section-title">
+                <i class="bi bi-list-ul"></i> Lista de Informes
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Número</th>
+                            <th>Funcionario</th>
+                            <th>Tipo</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Fotos</th>
+                            <th>Creado por</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in informes %}
+                        <tr>
+                            <td><span class="text-muted">#{{ i.id }}</span></td>
+
+                            <td>
+                                {% if i.numero_informe %}
+                                <strong style="font-size:0.8rem;">{{ i.numero_informe }}</strong>
+                                {% else %}
+                                <span class="text-muted" style="font-size:0.8rem;">Sin generar</span>
+                                {% endif %}
+                            </td>
+
+                            <td>{{ i.nombres }} {{ i.apellidos }}</td>
+                            <td>{{ i.tipo_informe }}</td>
+                            <td>{{ i.fecha_informe }}</td>
+
+                            <td>
+                                {% if i.estado == 'BORRADOR' %}
+                                <span class="badge bg-secondary">BORRADOR</span>
+                                {% elif i.estado == 'GENERADO' %}
+                                <span class="badge bg-primary">GENERADO</span>
+                                {% elif i.estado == 'FIRMADO' %}
+                                <span class="badge bg-success">FIRMADO</span>
+                                {% else %}
+                                <span class="badge bg-danger">ANULADO</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <span class="badge bg-info text-dark">
+                                    <i class="bi bi-images"></i> {{ i.total_fotos }}
+                                </span>
+                            </td>
+
+                            <td>{{ i.usuario_creador }}</td>
+
+                            <td>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    {% if i.estado == 'BORRADOR' %}
+                                    <a href="/informes/generar-numero/{{ i.id }}" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-hash"></i> Generar N°
+                                    </a>
+                                    {% else %}
+                                    <span class="badge bg-success"><i class="bi bi-check-lg"></i> N° generado</span>
+                                    {% endif %}
+
+                                    <a href="/informes/{{ i.id }}" class="btn btn-secondary btn-sm">
+                                        <i class="bi bi-eye"></i> Ver
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:0.3;"></i>
+                                No existen informes registrados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+</div>
+{% endblock %}

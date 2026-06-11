@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
+      <div class="sidebar-brand-name">INAMHI TICS</div>
+      <div class="sidebar-brand-sub">Sistema de Informes</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-avatar">{{ session.get("nombres","?")[:1] }}</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">{{ session.get("nombres","") }}</div>
+        <div class="sidebar-user-role">{{ session.get("rol","") }}</div>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+      {% if session["rol"] == "TECNICO" %}
+      <div class="sidebar-section-label">Informes</div>
+      <a href="/informe/revision-asignacion"><i class="bi bi-pc-display-horizontal"></i> Revisión (Asignación)</a>
+      <a href="/informe/descargo"><i class="bi bi-box-arrow-right"></i> Descargo</a>
+      <a href="/informe/revision-estado"><i class="bi bi-clipboard2-pulse"></i> Revisión (Estado)</a>
+      <a href="/informe/cambio-actualizacion"><i class="bi bi-arrow-repeat"></i> Cambio y Actualización</a>
+      <a href="/informe/instalacion"><i class="bi bi-tools"></i> Instalación</a>
+      {% endif %}
+
+      {% if session["rol"] in ["ADMINISTRADOR", "CONSULTA"] %}
+      <a href="/historial" class="active"><i class="bi bi-clock-history"></i> Historial</a>
+      {% endif %}
+
+      {% if session["rol"] == "ADMINISTRADOR" %}
+      <div class="sidebar-section-label">Sistema</div>
+      <a href="/usuarios"><i class="bi bi-people-fill"></i> Usuarios</a>
+      <a href="/auditoria"><i class="bi bi-shield-exclamation"></i> Auditoría</a>
+      <a href="/configuracion"><i class="bi bi-gear"></i> Configuración</a>
+      {% endif %}
+    </div>
+    <div class="sidebar-footer">
+      <a href="/logout" class="logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <div class="page-header">
+      <h2><i class="bi bi-clock-history"></i> Historial de Informes</h2>
+      <p>Registro de todos los informes técnicos generados en el sistema.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat,msg in messages %}
+    <div class="alert alert-{{ cat }} mb-3">{{ msg }}</div>
+    {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="card-info">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-title mb-0">
+          <i class="bi bi-journal-text"></i> Informes Generados
+        </div>
+        <span class="badge bg-primary fs-6 px-3">{{ registros|length }} registros</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Número de Informe</th>
+              <th>Tipo</th>
+              <th>Funcionario</th>
+              <th>Cargo</th>
+              <th>Fecha</th>
+              <th>Generado por</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in registros %}
+            <tr>
+              <td><span class="text-muted">{{ loop.index }}</span></td>
+              <td>
+                <strong style="font-size:.8rem;">{{ r.numero_informe or '—' }}</strong>
+              </td>
+              <td>
+                {% if r.tipo == 'RE_ASIGNACION' %}
+                <span class="badge bg-primary" style="font-size:.72rem;">Revisión (Asig.)</span>
+                {% elif r.tipo == 'DESCARGO' %}
+                <span class="badge" style="background:#d97706;font-size:.72rem;">Descargo</span>
+                {% elif r.tipo == 'RE_ESTADO' %}
+                <span class="badge bg-success" style="font-size:.72rem;">Revisión (Estado)</span>
+                {% elif r.tipo == 'CAMBIO_ACTUALIZACION' %}
+                <span class="badge" style="background:#7c3aed;font-size:.72rem;">Cambio / Actualiz.</span>
+                {% elif r.tipo == 'INSTALACION' %}
+                <span class="badge" style="background:#0891b2;font-size:.72rem;">Instalación</span>
+                {% endif %}
+              </td>
+              <td>{{ r.nombres }}</td>
+              <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ r.cargo }}">
+                {{ r.cargo }}
+              </td>
+              <td>{{ r.fecha }}</td>
+              <td>{{ r.usuario_creador or '—' }}</td>
+              <td>
+                <div class="d-flex gap-1 flex-wrap">
+                  {% if r.ruta_word %}
+                  <a href="/historial/{{ r.id }}/descargar" class="btn btn-success btn-sm">
+                    <i class="bi bi-file-earmark-word me-1"></i> Descargar
+                  </a>
+                  {% else %}
+                  <span class="badge bg-secondary">Sin archivo</span>
+                  {% endif %}
+                  {% if session["rol"] == "ADMINISTRADOR" %}
+                  <a href="/historial/{{ r.id }}/editar" class="btn btn-warning btn-sm text-dark">
+                    <i class="bi bi-pencil-square me-1"></i> Editar
+                  </a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="8" class="text-center text-muted py-4">
+                <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:.3;"></i>
+                No existen informes generados todavía.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+{% endblock %}

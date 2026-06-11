@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
+            <div class="sidebar-brand-name">INAMHI TICS</div>
+            <div class="sidebar-brand-sub">Sistema de Informes</div>
+        </div>
+        <div class="sidebar-user">
+            <div class="sidebar-avatar">{{ session.get("nombres", "?")[:1] }}</div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name">{{ session.get("nombres", "") }}</div>
+                <div class="sidebar-user-role">{{ session.get("rol", "") }}</div>
+            </div>
+        </div>
+        <div class="sidebar-nav">
+            <div class="sidebar-section-label">Principal</div>
+            <a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+            {% if session["rol"] == "ADMINISTRADOR" %}
+            <div class="sidebar-section-label">Administración</div>
+            <a href="/usuarios"><i class="bi bi-people-fill"></i> Usuarios</a>
+            {% endif %}
+
+            {% if session["rol"] in ["ADMINISTRADOR", "TECNICO"] %}
+            <div class="sidebar-section-label">Gestión</div>
+            <a href="/funcionarios"><i class="bi bi-person-badge"></i> Funcionarios</a>
+            <a href="/bienes"><i class="bi bi-cpu"></i> Bienes</a>
+            <a href="/informes"><i class="bi bi-file-earmark-text"></i> Informes</a>
+            <a href="/documentos" class="active"><i class="bi bi-folder2-open"></i> Documentos</a>
+            {% endif %}
+
+            {% if session["rol"] == "ADMINISTRADOR" %}
+            <div class="sidebar-section-label">Sistema</div>
+            <a href="/auditoria"><i class="bi bi-shield-exclamation"></i> Auditoría</a>
+            <a href="/respaldos"><i class="bi bi-cloud-arrow-up"></i> Respaldos</a>
+            <a href="/configuracion"><i class="bi bi-gear"></i> Configuración</a>
+            {% endif %}
+        </div>
+        <div class="sidebar-footer">
+            <a href="/logout" class="logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <div class="page-header">
+            <h2><i class="bi bi-folder2-open"></i> Historial de Documentos</h2>
+            <p>Registro de documentos PDF, Word y PDF firmados electrónicamente.</p>
+        </div>
+
+        <div class="card-info">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="section-title mb-0">
+                    <i class="bi bi-journal-text"></i> Bitácora Documental Global
+                </div>
+                <span class="badge bg-primary fs-6 px-3">{{ documentos|length }} documentos</span>
+            </div>
+
+            <!-- FILTROS -->
+            <form method="GET" action="/documentos" class="mb-4">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Tipo de Documento</label>
+                        <select name="tipo" class="form-select">
+                            <option value="">Todos los tipos</option>
+                            <option value="PDF" {% if filtro_tipo=='PDF' %}selected{% endif %}>PDF</option>
+                            <option value="WORD" {% if filtro_tipo=='WORD' %}selected{% endif %}>WORD</option>
+                            <option value="PDF_FIRMADO" {% if filtro_tipo=='PDF_FIRMADO' %}selected{% endif %}>PDF FIRMADO</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Estado del Informe</label>
+                        <select name="estado" class="form-select">
+                            <option value="">Todos los estados</option>
+                            <option value="BORRADOR" {% if filtro_estado=='BORRADOR' %}selected{% endif %}>BORRADOR</option>
+                            <option value="GENERADO" {% if filtro_estado=='GENERADO' %}selected{% endif %}>GENERADO</option>
+                            <option value="FIRMADO" {% if filtro_estado=='FIRMADO' %}selected{% endif %}>FIRMADO</option>
+                            <option value="ANULADO" {% if filtro_estado=='ANULADO' %}selected{% endif %}>ANULADO</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Buscar</label>
+                        <input type="text" name="buscar" class="form-control" placeholder="Informe, archivo o usuario..." value="{{ filtro_buscar }}">
+                    </div>
+                    <div class="col-md-1">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                    <div class="col-md-1">
+                        <a href="/documentos" class="btn btn-secondary w-100" title="Limpiar filtros">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
+
+            <!-- TABLA -->
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Informe</th>
+                            <th>Tipo</th>
+                            <th>Archivo</th>
+                            <th>Fecha</th>
+                            <th>Usuario</th>
+                            <th>Estado</th>
+                            <th>Firma</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in documentos %}
+                        <tr>
+                            <td><span class="text-muted">#{{ doc.id }}</span></td>
+                            <td><strong style="font-size:0.8rem;">{{ doc.numero_informe }}</strong></td>
+
+                            <td>
+                                {% if doc.tipo_documento == 'PDF' %}
+                                <span class="badge bg-danger"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</span>
+                                {% elif doc.tipo_documento == 'WORD' %}
+                                <span class="badge bg-primary"><i class="bi bi-file-earmark-word me-1"></i>WORD</span>
+                                {% elif doc.tipo_documento == 'PDF_FIRMADO' %}
+                                <span class="badge bg-success"><i class="bi bi-file-earmark-lock me-1"></i>PDF FIRMADO</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ doc.tipo_documento }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td style="font-size:0.78rem; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                {{ doc.nombre_archivo }}
+                            </td>
+
+                            <td>{{ doc.fecha_generacion }}</td>
+                            <td>{{ doc.usuario }}</td>
+
+                            <td>
+                                {% if doc.estado == 'BORRADOR' %}
+                                <span class="badge bg-secondary">BORRADOR</span>
+                                {% elif doc.estado == 'GENERADO' %}
+                                <span class="badge bg-primary">GENERADO</span>
+                                {% elif doc.estado == 'FIRMADO' %}
+                                <span class="badge bg-success">FIRMADO</span>
+                                {% elif doc.estado == 'ANULADO' %}
+                                <span class="badge bg-danger">ANULADO</span>
+                                {% else %}
+                                <span class="badge bg-dark">{{ doc.estado }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if doc.firma_validada == 1 %}
+                                <span class="badge bg-success"><i class="bi bi-patch-check-fill me-1"></i>Validada</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pendiente</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <a href="/documentos/{{ doc.id }}/descargar" class="btn btn-success btn-sm">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:0.3;"></i>
+                                No existen documentos generados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+</div>
+{% endblock %}

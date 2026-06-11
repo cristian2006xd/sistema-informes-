@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .user-card {
+    background:#fff;
+    border-radius:14px;
+    box-shadow:0 2px 12px rgba(0,0,0,.07);
+    border:1px solid rgba(0,0,0,.05);
+    overflow:hidden;
+    transition:transform .2s, box-shadow .2s;
+    display:flex;
+    flex-direction:column;
+    height:100%;
+  }
+  .user-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,.11); }
+  .user-card-accent { height:4px; width:100%; }
+  .user-card-body { padding:1.25rem; flex:1; display:flex; flex-direction:column; }
+  .user-avatar-lg {
+    width:46px; height:46px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.2rem; font-weight:800; color:#fff;
+    flex-shrink:0;
+  }
+  .user-fullname { font-size:.92rem; font-weight:700; color:#0f172a; margin-top:.6rem; line-height:1.3; }
+  .user-username {
+    font-size:.72rem; color:#64748b; font-family:monospace;
+    background:#f1f5f9; padding:2px 7px; border-radius:4px;
+    display:inline-block; margin-top:.25rem;
+  }
+  .user-email { font-size:.72rem; color:#94a3b8; margin-top:.3rem; }
+  .user-card-footer {
+    margin-top:auto; padding-top:.85rem;
+    border-top:1px solid #f1f5f9;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .role-badge {
+    font-size:.67rem; font-weight:700; letter-spacing:.4px;
+    padding:3px 9px; border-radius:20px;
+  }
+  .status-dot {
+    width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:4px;
+  }
+  .btn-toggle-off {
+    font-size:.72rem; padding:4px 10px; border-radius:7px;
+    border:1px solid #fca5a5; color:#dc2626; background:#fff5f5;
+    transition:background .15s,color .15s;
+  }
+  .btn-toggle-off:hover { background:#dc2626; color:#fff; }
+  .btn-toggle-on {
+    font-size:.72rem; padding:4px 10px; border-radius:7px;
+    border:1px solid #86efac; color:#16a34a; background:#f0fdf4;
+    transition:background .15s,color .15s;
+  }
+  .btn-toggle-on:hover { background:#16a34a; color:#fff; }
+  .section-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:1.2rem;
+  }
+  .section-header-title {
+    font-size:.78rem; font-weight:700; color:#374151;
+    text-transform:uppercase; letter-spacing:.5px;
+    display:flex; align-items:center; gap:.4rem;
+  }
+  .user-count-badge {
+    background:#eff6ff; color:#2563eb; font-size:.7rem;
+    font-weight:700; padding:2px 8px; border-radius:10px;
+  }
+</style>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
+      <div class="sidebar-brand-name">INAMHI TICS</div>
+      <div class="sidebar-brand-sub">Sistema de Informes</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-avatar">{{ session.get("nombres","?")[:1] }}</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">{{ session.get("nombres","") }}</div>
+        <div class="sidebar-user-role">{{ session.get("rol","") }}</div>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+      {% if session["rol"] == "TECNICO" %}
+      <div class="sidebar-section-label">Informes</div>
+      <a href="/informe/revision-asignacion"><i class="bi bi-pc-display-horizontal"></i> Revisión (Asignación)</a>
+      <a href="/informe/descargo"><i class="bi bi-box-arrow-right"></i> Descargo</a>
+      <a href="/informe/revision-estado"><i class="bi bi-clipboard2-pulse"></i> Revisión (Estado)</a>
+      <a href="/informe/cambio-actualizacion"><i class="bi bi-arrow-repeat"></i> Cambio y Actualización</a>
+      <a href="/informe/instalacion"><i class="bi bi-tools"></i> Instalación</a>
+      {% endif %}
+
+      {% if session["rol"] in ["ADMINISTRADOR", "CONSULTA"] %}
+      <a href="/historial"><i class="bi bi-clock-history"></i> Historial</a>
+      {% endif %}
+
+      {% if session["rol"] == "ADMINISTRADOR" %}
+      <div class="sidebar-section-label">Sistema</div>
+      <a href="/usuarios" class="active"><i class="bi bi-people-fill"></i> Usuarios</a>
+      <a href="/auditoria"><i class="bi bi-shield-exclamation"></i> Auditoría</a>
+      <a href="/configuracion"><i class="bi bi-gear"></i> Configuración</a>
+      {% endif %}
+    </div>
+    <div class="sidebar-footer">
+      <a href="/logout" class="logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <div class="page-header">
+      <h2><i class="bi bi-people-fill"></i> Gestión de Usuarios</h2>
+      <p>Administración de usuarios y roles del sistema.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat,msg in messages %}
+    <div class="alert alert-{{ cat }} mb-3">{{ msg }}</div>
+    {% endfor %}{% endif %}
+    {% endwith %}
+
+    <!-- FORMULARIO CREAR -->
+    <div class="card-info mb-4" style="border:1.5px solid #e2e8f0;border-radius:14px;">
+      <div class="section-title"><i class="bi bi-person-plus-fill"></i> Crear Nuevo Usuario</div>
+      <form method="POST" action="/usuarios/crear">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label form-label-sm fw-semibold text-secondary">Nombres</label>
+            <input type="text" name="nombres" class="form-control form-control-sm" placeholder="Ej: Juan Carlos" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm fw-semibold text-secondary">Apellidos</label>
+            <input type="text" name="apellidos" class="form-control form-control-sm" placeholder="Ej: Pérez López" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm fw-semibold text-secondary">Correo electrónico</label>
+            <input type="email" name="correo" class="form-control form-control-sm" placeholder="correo@inamhi.gob.ec">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm fw-semibold text-secondary">Nombre de usuario</label>
+            <input type="text" name="usuario" class="form-control form-control-sm" placeholder="@usuario123" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm fw-semibold text-secondary">Contraseña</label>
+            <input type="password" name="password" class="form-control form-control-sm" placeholder="••••••••" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm fw-semibold text-secondary">Rol</label>
+            <select name="rol_id" class="form-select form-select-sm" required>
+              {% for r in roles %}
+              <option value="{{ r.id }}">{{ r.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="d-flex justify-content-end mt-3 pt-3" style="border-top:1px solid #f1f5f9;">
+          <button type="submit" class="btn btn-primary btn-sm px-4">
+            <i class="bi bi-person-plus me-1"></i> Crear Usuario
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- GRID DE USUARIOS -->
+    <div class="card-info">
+      <div class="section-header">
+        <div class="section-header-title">
+          <i class="bi bi-people-fill" style="color:#2563eb;"></i>
+          Lista de Usuarios
+        </div>
+        <span class="user-count-badge">{{ usuarios | length }} usuario{{ 's' if usuarios | length != 1 else '' }}</span>
+      </div>
+
+      {% if usuarios %}
+      <div class="row g-3">
+        {% set rol_colors = {
+          "ADMINISTRADOR": "#2563eb",
+          "TECNICO":       "#059669",
+          "CONSULTA":      "#d97706"
+        } %}
+        {% set rol_bg = {
+          "ADMINISTRADOR": "#eff6ff",
+          "TECNICO":       "#f0fdf4",
+          "CONSULTA":      "#fffbeb"
+        } %}
+        {% for u in usuarios %}
+        {% set color = rol_colors.get(u.rol, "#64748b") %}
+        {% set bg    = rol_bg.get(u.rol, "#f8faff") %}
+        {% set es_yo = (u.id == session.get("usuario_id")) %}
+        <div class="col-md-6 col-xl-4">
+          <div class="user-card">
+            <div class="user-card-accent" style="background:{{ color }};"></div>
+            <div class="user-card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="user-avatar-lg" style="background:linear-gradient(135deg,{{ color }},{{ color }}99);">
+                  {{ u.nombres[:1] }}{{ u.apellidos[:1] }}
+                </div>
+                <span class="d-flex align-items-center" style="font-size:.72rem;font-weight:600;">
+                  {% if u.estado == 'ACTIVO' %}
+                  <span class="status-dot" style="background:#22c55e;"></span>
+                  <span style="color:#16a34a;">ACTIVO</span>
+                  {% else %}
+                  <span class="status-dot" style="background:#ef4444;"></span>
+                  <span style="color:#dc2626;">INACTIVO</span>
+                  {% endif %}
+                </span>
+              </div>
+              <div class="user-fullname">{{ u.nombres }} {{ u.apellidos }}</div>
+              <span class="user-username">@{{ u.usuario }}</span>
+              <div class="user-email">
+                <i class="bi bi-envelope me-1"></i>{{ u.correo if u.correo else '—' }}
+              </div>
+              <div class="user-card-footer">
+                <span class="role-badge" style="background:{{ bg }};color:{{ color }};border:1px solid {{ color }}33;">
+                  <i class="bi bi-shield-fill me-1" style="font-size:.6rem;"></i>{{ u.rol }}
+                </span>
+                {% if not es_yo %}
+                <form method="POST" action="/usuarios/{{ u.id }}/toggle" style="margin:0;">
+                  {% if u.estado == 'ACTIVO' %}
+                  <button type="submit" class="btn-toggle-off" onclick="return confirm('¿Inactivar a {{ u.nombres }}?')">
+                    <i class="bi bi-person-x me-1"></i>Inactivar
+                  </button>
+                  {% else %}
+                  <button type="submit" class="btn-toggle-on" onclick="return confirm('¿Activar a {{ u.nombres }}?')">
+                    <i class="bi bi-person-check me-1"></i>Activar
+                  </button>
+                  {% endif %}
+                </form>
+                {% else %}
+                <span style="font-size:.68rem;color:#94a3b8;"><i class="bi bi-lock me-1"></i>Tu cuenta</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-5" style="color:#94a3b8;">
+        <i class="bi bi-people fs-1 d-block mb-2" style="opacity:.3;"></i>
+        <div style="font-size:.85rem;">No existen usuarios registrados.</div>
+      </div>
+      {% endif %}
+    </div>
+
+  </main>
+</div>
+{% endblock %}
