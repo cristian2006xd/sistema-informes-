@@ -208,14 +208,6 @@ def _add_run_html(para, text, size=11, font="Times New Roman"):
             run.font.name = font
 
 
-def _cell_bg(cell, hex_color):
-    tc = cell._tc
-    tcPr = tc.get_or_add_tcPr()
-    shd = OxmlElement("w:shd")
-    shd.set(qn("w:val"), "clear")
-    shd.set(qn("w:color"), "auto")
-    shd.set(qn("w:fill"), hex_color.lstrip("#"))
-    tcPr.append(shd)
 
 
 
@@ -394,47 +386,39 @@ def _build_footer(doc, config):
 
 # ── Blocks ─────────────────────────────────────────────────────────────────────
 
-def _add_metadata_block(doc, para_value, fecha_str, asunto):
-    table = doc.add_table(4, 2)
-    table.style = "Table Grid"
+def _add_metadata_block(doc, asunto, fecha_str):
+    # Asunto
+    p_a = doc.add_paragraph()
+    p_a.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    p_a.paragraph_format.space_before = Pt(6)
+    p_a.paragraph_format.space_after  = Pt(4)
+    r_al = p_a.add_run("Asunto: ")
+    r_al.bold = True
+    r_al.font.size = Pt(11)
+    r_al.font.name = "Times New Roman"
+    r_av = p_a.add_run(asunto)
+    r_av.font.size = Pt(11)
+    r_av.font.name = "Times New Roman"
 
-    labels  = ["PARA:", "DE:", "ASUNTO:", "FECHA:"]
-    values  = [
-        para_value,
-        "Unidad de Tecnologías de la Información y Comunicación",
-        asunto,
-        fecha_str,
-    ]
-
-    for i, (lbl, val) in enumerate(zip(labels, values)):
-        cell_l = table.cell(i, 0)
-        cell_v = table.cell(i, 1)
-
-        _cell_bg(cell_l, "003b73")
-        p_l = cell_l.paragraphs[0]
-        p_l.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r_l = p_l.add_run(lbl)
-        r_l.bold = True
-        r_l.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-        r_l.font.size = Pt(10)
-        r_l.font.name = "Arial"
-
-        p_v = cell_v.paragraphs[0]
-        p_v.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        r_v = p_v.add_run(val)
-        r_v.font.size = Pt(10)
-        r_v.font.name = "Times New Roman"
-
-    for row in table.rows:
-        row.cells[0].width = Cm(3.0)
-        row.cells[1].width = Cm(13.5)
+    # Fecha
+    p_f = doc.add_paragraph()
+    p_f.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    p_f.paragraph_format.space_before = Pt(0)
+    p_f.paragraph_format.space_after  = Pt(6)
+    r_fl = p_f.add_run("Fecha: ")
+    r_fl.bold = True
+    r_fl.font.size = Pt(11)
+    r_fl.font.name = "Times New Roman"
+    r_fv = p_f.add_run(fecha_str)
+    r_fv.font.size = Pt(11)
+    r_fv.font.name = "Times New Roman"
 
 
 def _add_section_title(doc, number, title):
     para = doc.add_paragraph()
     para.alignment = WD_ALIGN_PARAGRAPH.LEFT
     para.paragraph_format.space_before = Pt(6)
-    para.paragraph_format.space_after  = Pt(2)
+    para.paragraph_format.space_after  = Pt(8)
     run = para.add_run(f"{number}. {title.upper()}")
     run.bold = True
     run.font.size = Pt(11)
@@ -448,7 +432,7 @@ def _add_bien_block(doc, bien):
     p_tipo = doc.add_paragraph()
     p_tipo.alignment = WD_ALIGN_PARAGRAPH.LEFT
     p_tipo.paragraph_format.space_before = Pt(6)
-    p_tipo.paragraph_format.space_after  = Pt(2)
+    p_tipo.paragraph_format.space_after  = Pt(8)
     r_tipo = p_tipo.add_run(tipo_str)
     r_tipo.bold = True
     r_tipo.underline = True
@@ -456,42 +440,31 @@ def _add_bien_block(doc, bien):
     r_tipo.font.size = Pt(11)
     r_tipo.font.name = "Times New Roman"
 
-    # MARCA / ESTADO row
-    tbl = doc.add_table(1, 2)
-    tbl.style = "Table Grid"
-    for col_idx, (label, field) in enumerate([("MARCA", "marca"), ("ESTADO", "estado_bien")]):
-        cell = tbl.cell(0, col_idx)
-        _cell_bg(cell, "D6E4F0")
-        p = cell.paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r = p.add_run(f"{label}: {(bien.get(field) or '—').upper()}")
-        r.bold = True
-        r.font.size = Pt(10)
-        r.font.name = "Times New Roman"
-    for row in tbl.rows:
-        row.cells[0].width = Cm(8.0)
-        row.cells[1].width = Cm(8.0)
-
-    # Remaining fields
-    for label, field in [
+    # Todos los campos como texto plano
+    fields = [
+        ("MARCA",            "marca"),
+        ("ESTADO",           "estado_bien"),
         ("MODELO",           "modelo"),
         ("CÓDIGO ESBYE",     "codigo_esbye"),
         ("NÚMERO DE SERIE",  "serie"),
         ("CÓDIGO ANTERIOR",  "codigo_anterior"),
-    ]:
+    ]
+    for label, field in fields:
         val = bien.get(field) or ""
-        if val:
-            p = doc.add_paragraph()
-            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            p.paragraph_format.space_before = Pt(0)
-            p.paragraph_format.space_after  = Pt(0)
-            r_lbl = p.add_run(f"{label}: ")
-            r_lbl.bold = True
-            r_lbl.font.size = Pt(10)
-            r_lbl.font.name = "Times New Roman"
-            r_val = p.add_run(val)
-            r_val.font.size = Pt(10)
-            r_val.font.name = "Times New Roman"
+        if not val:
+            continue
+        is_last = (label == "CÓDIGO ANTERIOR")
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after  = Pt(8) if is_last else Pt(1)
+        r_lbl = p.add_run(f"{label}: ")
+        r_lbl.bold = True
+        r_lbl.font.size = Pt(10)
+        r_lbl.font.name = "Times New Roman"
+        r_val = p.add_run(val.upper() if label in ("MARCA", "ESTADO") else val)
+        r_val.font.size = Pt(10)
+        r_val.font.name = "Times New Roman"
 
 
 def _add_elaborado_aprobado(doc, config):
@@ -505,15 +478,13 @@ def _add_elaborado_aprobado(doc, config):
     tbl = doc.add_table(3, 2)
     tbl.style = "Table Grid"
 
-    # Header row (dark blue)
+    # Header row (sin fondo)
     for col_idx, label in enumerate(["ELABORADO POR:", "APROBADO POR:"]):
         cell = tbl.cell(0, col_idx)
-        _cell_bg(cell, "003b73")
         p = cell.paragraphs[0]
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         r = p.add_run(label)
         r.bold = True
-        r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
         r.font.size = Pt(10)
         r.font.name = "Arial"
     _row_height(tbl.rows[0], 400)
@@ -583,14 +554,20 @@ def generar_word_informe_tecnico(
     _build_header(doc, config)
     _build_footer(doc, config)
 
-    # Título del informe
-    _add_para(doc, f"INFORME TÉCNICO N° {numero_informe}",
+    # Título principal
+    _add_para(doc, "INFORME TÉCNICO",
+              bold=True, size=18,
+              align=WD_ALIGN_PARAGRAPH.CENTER,
+              space_before=4, space_after=4)
+
+    # Código del informe
+    _add_para(doc, numero_informe,
               bold=True, size=12,
               align=WD_ALIGN_PARAGRAPH.CENTER,
-              space_after=6)
+              space_after=12)
 
-    # Bloque de metadatos
-    _add_metadata_block(doc, nombres, fecha_str, plantilla["asunto"])
+    # Asunto y Fecha (sin tabla)
+    _add_metadata_block(doc, plantilla["asunto"], fecha_str)
 
     _add_para(doc, space_after=4)
 
@@ -604,6 +581,7 @@ def generar_word_informe_tecnico(
     _add_run_html(ant_para, ant_text)
 
     # 2. DESARROLLO
+    _add_para(doc, space_after=6)
     _add_section_title(doc, "2", "DESARROLLO")
     # (tipo) → (índice donde insertar grupo1, índice donde insertar grupo2)
     _FOTO_POS = {
@@ -616,10 +594,10 @@ def generar_word_informe_tecnico(
     if tipo in _FOTO_POS:
         g1_idx, g2_idx = _FOTO_POS[tipo]
         for idx, dev_txt in enumerate(plantilla["desarrollo"]):
-            p = doc.add_paragraph(style="List Bullet")
+            p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            p.paragraph_format.space_before = Pt(1)
-            p.paragraph_format.space_after  = Pt(1)
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after  = Pt(6)
             _add_run_html(p, _sustituir(dev_txt, vd))
             if idx == g1_idx and fotos_generales:
                 _add_para(doc, space_after=4)
@@ -631,10 +609,10 @@ def generar_word_informe_tecnico(
                     _add_photo(doc, ruta)
     else:
         for dev_txt in plantilla["desarrollo"]:
-            p = doc.add_paragraph(style="List Bullet")
+            p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            p.paragraph_format.space_before = Pt(1)
-            p.paragraph_format.space_after  = Pt(1)
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after  = Pt(6)
             _add_run_html(p, _sustituir(dev_txt, vd))
         if fotos_generales:
             _add_para(doc, space_after=4)
@@ -645,8 +623,8 @@ def generar_word_informe_tecnico(
     if tipo in _FOTO_POS and bienes:
         p_sub = doc.add_paragraph()
         p_sub.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        p_sub.paragraph_format.space_before = Pt(6)
-        p_sub.paragraph_format.space_after  = Pt(2)
+        p_sub.paragraph_format.space_before = Pt(14)
+        p_sub.paragraph_format.space_after  = Pt(4)
         r_sub = p_sub.add_run("Características e identificación del bien tecnológico")
         r_sub.bold = True
         r_sub.font.size = Pt(11)
@@ -664,10 +642,10 @@ def generar_word_informe_tecnico(
     # 3. CONCLUSIONES
     _add_section_title(doc, "3", "CONCLUSIONES")
     for conc_txt in plantilla["conclusiones"]:
-        p = doc.add_paragraph(style="List Bullet")
+        p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        p.paragraph_format.space_before = Pt(1)
-        p.paragraph_format.space_after  = Pt(1)
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after  = Pt(6)
         _add_run_html(p, _sustituir(conc_txt, vd))
 
     # ELABORADO / APROBADO
