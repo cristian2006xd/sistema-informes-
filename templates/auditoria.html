@@ -53,42 +53,131 @@
         </div>
 
         <div class="card-info">
-            <div class="section-title">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div class="section-title mb-0">
                 <i class="bi bi-journal-check"></i> Bitácora de Actividad del Sistema
+              </div>
+              <span class="badge bg-primary fs-6 px-3">{{ registros|length }} registros</span>
             </div>
 
+            <!-- ── FILTROS ──────────────────────────────────────────────── -->
+            <div class="row g-2 mb-3 align-items-center">
+              <div class="col-12 col-lg-5">
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0 px-2">
+                    <i class="bi bi-search text-muted" style="font-size:.85rem;"></i>
+                  </span>
+                  <input type="text" id="aq" class="form-control form-control-sm border-start-0"
+                         placeholder="Buscar por usuario, acción, detalle, IP…">
+                </div>
+              </div>
+              <div class="col-6 col-sm-4 col-lg-3">
+                <select id="a-modulo" class="form-select form-select-sm">
+                  <option value="">Todos los módulos</option>
+                  {% for m in registros | map(attribute='modulo') | unique | sort %}
+                  <option value="{{ m }}">{{ m }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-6 col-sm-4 col-lg-2">
+                <input type="date" id="a-fecha" class="form-control form-control-sm" title="Filtrar por fecha">
+              </div>
+              <div class="col-6 col-sm-auto col-lg-auto">
+                <button type="button" id="a-clear" class="btn btn-sm w-100"
+                        style="background:linear-gradient(135deg,#64748b,#475569);color:#fff;
+                               border:none;border-radius:8px;font-weight:600;white-space:nowrap;">
+                  <i class="bi bi-x-circle me-1"></i>Limpiar
+                </button>
+              </div>
+            </div>
+            <!-- ──────────────────────────────────────────────────────────── -->
+
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table align-middle" style="border-collapse:separate;border-spacing:0;">
                     <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Usuario</th>
-                            <th>Módulo</th>
-                            <th>Acción</th>
-                            <th>Detalle</th>
-                            <th>IP</th>
-                            <th>Fecha</th>
+                        <tr style="background:linear-gradient(135deg,#f1f5f9,#e2e8f0);">
+                            <th style="padding:.9rem 1rem;font-size:.72rem;font-weight:700;letter-spacing:.6px;
+                                       text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;
+                                       width:30%;">ID</th>
+                            <th style="padding:.9rem 1rem;font-size:.72rem;font-weight:700;letter-spacing:.6px;
+                                       text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;">Usuario</th>
+                            <th style="padding:.9rem 1rem;font-size:.72rem;font-weight:700;letter-spacing:.6px;
+                                       text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;">Módulo</th>
+                            <th style="padding:.9rem 1rem;font-size:.72rem;font-weight:700;letter-spacing:.6px;
+                                       text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;">Acción</th>
+                            <th style="padding:.9rem 1rem;font-size:.72rem;font-weight:700;letter-spacing:.6px;
+                                       text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;">IP</th>
+                            <th style="padding:.9rem 1rem;font-size:.72rem;font-weight:700;letter-spacing:.6px;
+                                       text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;">Fecha</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for r in registros %}
-                        <tr>
-                            <td><span class="text-muted">#{{ r.id }}</span></td>
-                            <td><strong>{{ r.usuario }}</strong></td>
-                            <td>
-                                <span class="badge bg-primary">{{ r.modulo }}</span>
-                            </td>
-                            <td>{{ r.accion }}</td>
-                            <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ r.detalle }}">
+                        <tr class="audit-row"
+                            data-modulo="{{ r.modulo }}"
+                            data-fecha="{{ r.fecha | string | truncate(10, true, '') }}"
+                            data-q="{{ r.usuario ~ ' ' ~ r.modulo ~ ' ' ~ r.accion ~ ' ' ~ (r.detalle or '') ~ ' ' ~ (r.ip or '') | lower }}"
+                            style="border-bottom:1px solid #f1f5f9;transition:background .15s;">
+                            <td style="padding:.85rem 1rem;max-width:0;width:30%;">
+                              <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                                           font-size:.83rem;color:#1e293b;" title="{{ r.detalle }}">
                                 {{ r.detalle }}
+                              </span>
                             </td>
-                            <td><code style="font-size:0.78rem;">{{ r.ip }}</code></td>
-                            <td>{{ r.fecha }}</td>
+                            <td style="padding:.85rem 1rem;">
+                              <div class="d-flex align-items-center gap-2">
+                                <div style="width:30px;height:30px;border-radius:50%;flex-shrink:0;
+                                            background:linear-gradient(135deg,#0f766e,#0891b2);
+                                            display:flex;align-items:center;justify-content:center;
+                                            color:#fff;font-size:.72rem;font-weight:700;">
+                                  {{ r.usuario[:1] | upper }}
+                                </div>
+                                <strong style="font-size:.84rem;color:#1e293b;">{{ r.usuario }}</strong>
+                              </div>
+                            </td>
+                            <td style="padding:.85rem 1rem;">
+                              {% if r.modulo == 'Informes' %}
+                              <span style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;
+                                           font-size:.7rem;font-weight:600;padding:.28rem .7rem;border-radius:20px;">
+                                <i class="bi bi-file-earmark-text me-1"></i>{{ r.modulo }}
+                              </span>
+                              {% elif r.modulo == 'Configuración' %}
+                              <span style="background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;
+                                           font-size:.7rem;font-weight:600;padding:.28rem .7rem;border-radius:20px;">
+                                <i class="bi bi-gear me-1"></i>{{ r.modulo }}
+                              </span>
+                              {% elif r.modulo == 'Usuarios' %}
+                              <span style="background:linear-gradient(135deg,#0f766e,#0891b2);color:#fff;
+                                           font-size:.7rem;font-weight:600;padding:.28rem .7rem;border-radius:20px;">
+                                <i class="bi bi-people me-1"></i>{{ r.modulo }}
+                              </span>
+                              {% elif r.modulo == 'Auth' %}
+                              <span style="background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;
+                                           font-size:.7rem;font-weight:600;padding:.28rem .7rem;border-radius:20px;">
+                                <i class="bi bi-shield-lock me-1"></i>{{ r.modulo }}
+                              </span>
+                              {% else %}
+                              <span style="background:#e2e8f0;color:#475569;
+                                           font-size:.7rem;font-weight:600;padding:.28rem .7rem;border-radius:20px;">
+                                {{ r.modulo }}
+                              </span>
+                              {% endif %}
+                            </td>
+                            <td style="padding:.85rem 1rem;font-size:.83rem;color:#374151;">{{ r.accion }}</td>
+                            <td style="padding:.85rem 1rem;">
+                              <code style="font-size:.76rem;background:#f1f5f9;color:#0f766e;
+                                           padding:.18rem .5rem;border-radius:6px;border:1px solid #e2e8f0;">
+                                {{ r.ip }}
+                              </code>
+                            </td>
+                            <td style="padding:.85rem 1rem;font-size:.8rem;color:#64748b;white-space:nowrap;">
+                              <i class="bi bi-clock me-1" style="opacity:.5;"></i>{{ r.fecha }}
+                            </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
-                                <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:0.3;"></i>
+                            <td colspan="6" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox d-block mb-2" style="font-size:2.5rem;opacity:0.2;"></i>
                                 No existen registros de auditoría.
                             </td>
                         </tr>
@@ -96,8 +185,47 @@
                     </tbody>
                 </table>
             </div>
+
+            <style>
+              .audit-row:hover td { background:#f8faff !important; }
+              .audit-row:last-child { border-bottom:none; }
+            </style>
         </div>
 
     </main>
 </div>
+
+<script>
+(function () {
+  const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+  const aq      = document.getElementById('aq');
+  const aModulo = document.getElementById('a-modulo');
+  const aFecha  = document.getElementById('a-fecha');
+  const aClear  = document.getElementById('a-clear');
+  const rows    = document.querySelectorAll('table tbody tr[data-q]');
+
+  function filtrar() {
+    const q      = norm(aq.value);
+    const modulo = aModulo ? aModulo.value : '';
+    const fecha  = aFecha  ? aFecha.value  : '';
+    rows.forEach(tr => {
+      const ok =
+        (!q      || norm(tr.dataset.q).includes(q)) &&
+        (!modulo || tr.dataset.modulo === modulo)    &&
+        (!fecha  || tr.dataset.fecha  === fecha);
+      tr.style.display = ok ? '' : 'none';
+    });
+  }
+
+  [aq, aModulo, aFecha].forEach(el => {
+    if (el) { el.addEventListener('input', filtrar); el.addEventListener('change', filtrar); }
+  });
+
+  aClear?.addEventListener('click', () => {
+    [aq, aModulo, aFecha].forEach(el => { if (el) el.value = ''; });
+    filtrar();
+  });
+})();
+</script>
 {% endblock %}

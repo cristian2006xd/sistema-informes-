@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  input[type="text"] { text-transform: uppercase; }
+</style>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
+      <div class="sidebar-brand-name">INAMHI TICS</div>
+      <div class="sidebar-brand-sub">Sistema de Informes</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-avatar">{{ session.get("nombres","?")[:1] }}</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">{{ session.get("nombres","") }}</div>
+        <div class="sidebar-user-role">{{ session.get("rol","") }}</div>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+      {% if session["rol"] in ["TECNICO","ADMINISTRADOR"] %}
+      <div class="sidebar-section-label">Informes</div>
+      <a href="/informe/revision-asignacion"><i class="bi bi-pc-display-horizontal"></i> Revisión (Asignación)</a>
+      <a href="/informe/descargo"><i class="bi bi-box-arrow-right"></i> Descargo</a>
+      <a href="/informe/revision-estado"><i class="bi bi-clipboard2-pulse"></i> Revisión (Estado)</a>
+      <a href="/informe/cambio-actualizacion"><i class="bi bi-arrow-repeat"></i> Cambio y Actualización</a>
+      <a href="/informe/instalacion"><i class="bi bi-tools"></i> Instalación</a>
+      <a href="/informe/otros" class="active"><i class="bi bi-folder-plus"></i> Otros</a>
+      {% endif %}
+
+      {% if session["rol"] in ["ADMINISTRADOR", "CONSULTA"] %}
+      <a href="/historial"><i class="bi bi-clock-history"></i> Historial</a>
+      {% endif %}
+
+      {% if session["rol"] == "ADMINISTRADOR" %}
+      <div class="sidebar-section-label">Sistema</div>
+      <a href="/usuarios"><i class="bi bi-people-fill"></i> Usuarios</a>
+      <a href="/auditoria"><i class="bi bi-shield-exclamation"></i> Auditoría</a>
+      <a href="/configuracion"><i class="bi bi-gear"></i> Configuración</a>
+      {% endif %}
+    </div>
+    <div class="sidebar-footer">
+      <a href="/logout" class="logout"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <div class="page-header">
+      <h2><i class="bi bi-folder-plus"></i> Otros Documentos</h2>
+      <p>Registre documentos externos con código institucional automático.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      {% for cat, msg in messages %}
+      {% if cat != 'success' %}
+      showToast(
+        {% if cat == 'warning' %}'bi-exclamation-triangle-fill','Advertencia','linear-gradient(135deg,#d97706,#f59e0b)'
+        {% else %}'bi-x-circle-fill','Error','linear-gradient(135deg,#dc2626,#ef4444)'{% endif %},
+        {{ msg | tojson }}
+      );
+      {% endif %}
+      {% endfor %}
+    });
+    </script>
+    {% endif %}{% endwith %}
+
+    <form method="POST" action="/informe/otros/generar" enctype="multipart/form-data">
+
+      <!-- Código asignado -->
+      <div class="card-info mb-4">
+        <div class="section-title"><i class="bi bi-hash"></i> Código del Informe</div>
+        <p class="text-muted mb-3" style="font-size:.82rem;">
+          El sistema asigna automáticamente el siguiente número disponible.
+        </p>
+        <div class="d-flex align-items-center gap-3 p-3 rounded-3"
+             style="background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1.5px solid #6ee7b7;">
+          <div style="width:48px;height:48px;background:linear-gradient(135deg,#059669,#0f766e);
+                      border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="bi bi-file-earmark-code" style="font-size:1.4rem;color:#fff;"></i>
+          </div>
+          <div>
+            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;
+                        letter-spacing:.5px;color:#065f46;margin-bottom:.2rem;">
+              Código que se asignará
+            </div>
+            <div id="codigo-preview" style="font-size:1.15rem;font-weight:800;
+                                             color:#059669;letter-spacing:.5px;font-family:monospace;">
+              {{ numero_preview }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fecha -->
+      <div class="card-info mb-4">
+        <div class="section-title"><i class="bi bi-calendar3"></i> Fecha del Informe</div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>
+            <input type="date" name="fecha" class="form-control" value="{{ today }}" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos del funcionario -->
+      <div class="card-info mb-4">
+        <div class="section-title"><i class="bi bi-person-vcard"></i> Datos del Funcionario</div>
+        <div class="row g-3">
+          <div class="col-md-7">
+            <label class="form-label fw-semibold">Nombres y Apellidos <span class="text-danger">*</span></label>
+            <input type="text" name="nombres" class="form-control" placeholder="NOMBRES COMPLETOS" required>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label fw-semibold">Cédula <span class="text-danger">*</span></label>
+            <input type="text" name="cedula" class="form-control" placeholder="0000000000"
+                   maxlength="13" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Cargo <span class="text-danger">*</span></label>
+            <input type="text" name="cargo" class="form-control" placeholder="CARGO INSTITUCIONAL" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Dirección / Dependencia <span class="text-danger">*</span></label>
+            <input type="text" name="direccion" class="form-control"
+                   placeholder="DIRECCIÓN O NOMBRE DE LA DEPENDENCIA" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subir PDF -->
+      <div class="card-info mb-4">
+        <div class="section-title"><i class="bi bi-file-earmark-pdf"></i> Documento PDF</div>
+        <p class="text-muted mb-3" style="font-size:.82rem;">
+          Adjunte el documento PDF que se registrará bajo el código asignado.
+        </p>
+
+        <!-- Drop zone -->
+        <div id="drop-zone"
+             style="border:2px dashed #6ee7b7;border-radius:16px;background:#f0fdf4;
+                    padding:2.5rem 1.5rem;text-align:center;cursor:pointer;
+                    transition:border-color .2s,background .2s;"
+             onclick="document.getElementById('pdf-input').click()"
+             ondragover="event.preventDefault();this.style.borderColor='#059669';this.style.background='#dcfce7';"
+             ondragleave="this.style.borderColor='#6ee7b7';this.style.background='#f0fdf4';"
+             ondrop="handleDrop(event)">
+          <i class="bi bi-cloud-arrow-up" style="font-size:2.8rem;color:#059669;display:block;margin-bottom:.6rem;"></i>
+          <div style="font-weight:700;color:#065f46;font-size:.95rem;">
+            Arrastra el PDF aquí o haz clic para seleccionar
+          </div>
+          <div style="font-size:.78rem;color:#6b7280;margin-top:.3rem;">Solo archivos PDF · Máximo 20 MB</div>
+        </div>
+
+        <input type="file" id="pdf-input" name="pdf_otros" accept=".pdf"
+               style="display:none;" onchange="onFileSelected(this)">
+
+        <!-- Preview del archivo seleccionado -->
+        <div id="file-preview" style="display:none;margin-top:1rem;">
+          <div class="d-flex align-items-center gap-3 p-3 rounded-3"
+               style="background:#fff;border:1.5px solid #6ee7b7;">
+            <i class="bi bi-file-earmark-pdf-fill" style="font-size:2rem;color:#dc2626;flex-shrink:0;"></i>
+            <div style="flex:1;min-width:0;">
+              <div id="file-name" style="font-weight:600;font-size:.88rem;color:#1e293b;
+                                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+              <div id="file-size" style="font-size:.75rem;color:#6b7280;"></div>
+            </div>
+            <button type="button" onclick="clearFile()"
+                    style="background:none;border:none;color:#94a3b8;font-size:1.3rem;cursor:pointer;
+                           padding:.2rem .4rem;border-radius:6px;"
+                    title="Quitar archivo">
+              <i class="bi bi-x-circle"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botones -->
+      <div class="d-flex gap-2 mb-4">
+        <button type="button" id="btn-guardar" class="btn btn-primary"
+                onclick="submitOtros()"
+                style="background:linear-gradient(135deg,#0f766e,#0891b2);border:none;
+                       border-radius:10px;font-weight:600;padding:.5rem 1.4rem;">
+          <i class="bi bi-cloud-upload me-1"></i> Registrar documento
+        </button>
+        <a href="/dashboard" class="btn btn-secondary" style="border-radius:10px;">
+          <i class="bi bi-x-lg me-1"></i> Cancelar
+        </a>
+      </div>
+
+    </form>
+
+  </main>
+</div>
+
+<!-- ── TOAST CONTAINER ───────────────────────────────────────────────────── -->
+<div id="toast-container"
+     style="position:fixed;bottom:1.6rem;right:1.6rem;z-index:9999;
+            display:flex;flex-direction:column;gap:.65rem;width:340px;pointer-events:none;">
+</div>
+
+<style>
+@keyframes toastBar { from { width:100%; } to { width:0%; } }
+</style>
+
+<script>
+function showToast(icon, title, grad, message, duration) {
+  duration = duration || 4500;
+  const box = document.getElementById('toast-container');
+  const t   = document.createElement('div');
+  t.setAttribute('data-toast','');
+  t.style.cssText =
+    'border-radius:16px;overflow:hidden;box-shadow:0 10px 36px rgba(0,0,0,.2);' +
+    'transform:translateX(115%);transition:transform .38s cubic-bezier(.34,1.4,.64,1);' +
+    'background:#fff;pointer-events:auto;';
+  t.innerHTML =
+    '<div style="background:' + grad + ';padding:.72rem 1rem;display:flex;align-items:center;gap:.55rem;">' +
+      '<i class="bi ' + icon + '" style="font-size:1.15rem;color:#fff;flex-shrink:0;"></i>' +
+      '<span style="color:#fff;font-weight:700;font-size:.86rem;flex:1;">' + title + '</span>' +
+      '<button onclick="this.closest(\'[data-toast]\').remove()" ' +
+              'style="background:none;border:none;color:rgba(255,255,255,.75);font-size:1.25rem;' +
+                     'cursor:pointer;padding:0;line-height:1;">&times;</button>' +
+    '</div>' +
+    '<div style="padding:.68rem 1rem .72rem;font-size:.82rem;color:#374151;' +
+                'border-top:1px solid #f3f4f6;">' + message + '</div>' +
+    '<div style="height:3px;background:' + grad + ';animation:toastBar ' + (duration/1000) + 's linear forwards;"></div>';
+  box.appendChild(t);
+  requestAnimationFrame(() => requestAnimationFrame(() => t.style.transform = 'translateX(0)'));
+  setTimeout(() => { t.style.transform = 'translateX(115%)'; setTimeout(() => t.remove(), 400); }, duration);
+}
+
+function onFileSelected(input) {
+  if (input.files && input.files[0]) showFilePreview(input.files[0]);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const dz = document.getElementById('drop-zone');
+  dz.style.borderColor = '#6ee7b7'; dz.style.background = '#f0fdf4';
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  if (file.type !== 'application/pdf') {
+    showToast('bi-x-circle-fill','Error','linear-gradient(135deg,#dc2626,#ef4444)',
+              'Solo se aceptan archivos PDF.');
+    return;
+  }
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  document.getElementById('pdf-input').files = dt.files;
+  showFilePreview(file);
+}
+
+function showFilePreview(file) {
+  document.getElementById('file-name').textContent = file.name;
+  const mb = (file.size / 1024 / 1024).toFixed(2);
+  document.getElementById('file-size').textContent = mb + ' MB';
+  document.getElementById('file-preview').style.display = '';
+  document.getElementById('drop-zone').style.display = 'none';
+}
+
+function clearFile() {
+  document.getElementById('pdf-input').value = '';
+  document.getElementById('file-preview').style.display = 'none';
+  document.getElementById('drop-zone').style.display = '';
+}
+
+async function submitOtros() {
+  const form = document.querySelector('form');
+  const btn  = document.getElementById('btn-guardar');
+
+  // Validación básica
+  const requeridos = form.querySelectorAll('[required]');
+  for (const el of requeridos) {
+    if (!el.value.trim()) { el.focus(); el.reportValidity(); return; }
+  }
+  if (!document.getElementById('pdf-input').files[0]) {
+    showToast('bi-exclamation-triangle-fill','Atención',
+              'linear-gradient(135deg,#d97706,#f59e0b)',
+              'Debe adjuntar un archivo PDF antes de registrar.');
+    return;
+  }
+
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Registrando…';
+
+  try {
+    const fd = new FormData(form);
+    const resp = await fetch('/informe/otros/generar', {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+      body: fd,
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      document.getElementById('modal-codigo-asignado').textContent = data.numero;
+      // Reiniciar barra de progreso
+      const bar = document.getElementById('otros-progress-bar');
+      bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = '';
+      new bootstrap.Modal(document.getElementById('modalOtrosExito')).show();
+      // Actualizar preview al siguiente número
+      if (data.siguiente) document.getElementById('codigo-preview').textContent = data.siguiente;
+      form.reset(); clearFile();
+    } else {
+      showToast('bi-x-circle-fill','Error',
+                'linear-gradient(135deg,#dc2626,#ef4444)',
+                data.error || 'No se pudo registrar el documento.');
+    }
+  } catch(e) {
+    showToast('bi-x-circle-fill','Error de conexión',
+              'linear-gradient(135deg,#dc2626,#ef4444)', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+</script>
+
+<!-- ── MODAL ÉXITO REGISTRO ──────────────────────────────────────────────── -->
+<div class="modal fade" id="modalOtrosExito" tabindex="-1" aria-modal="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+    <div class="modal-content"
+         style="border-radius:22px;border:none;overflow:hidden;
+                box-shadow:0 20px 60px rgba(0,0,0,.18);text-align:center;">
+
+      <div style="background:linear-gradient(135deg,#059669 0%,#0f766e 100%);
+                  padding:2.2rem 2rem 1.8rem;">
+        <div style="margin:0 auto 1rem;">
+          <svg viewBox="0 0 52 52" style="width:72px;height:72px;">
+            <circle cx="26" cy="26" r="23"
+                    fill="none" stroke="rgba(255,255,255,.3)" stroke-width="3"/>
+            <circle cx="26" cy="26" r="23"
+                    fill="none" stroke="#fff" stroke-width="3"
+                    stroke-dasharray="145" stroke-dashoffset="145"
+                    style="transform:rotate(-90deg);transform-origin:center;
+                           animation:drawRing .55s ease forwards .1s;"/>
+            <polyline points="14,27 22,35 38,19"
+                      fill="none" stroke="#fff" stroke-width="3.5"
+                      stroke-linecap="round" stroke-linejoin="round"
+                      stroke-dasharray="30" stroke-dashoffset="30"
+                      style="animation:drawCheck .35s ease forwards .6s;"/>
+          </svg>
+        </div>
+        <h5 style="color:#fff;font-weight:700;margin:0;font-size:1.05rem;">
+          ¡Documento registrado!
+        </h5>
+        <p style="color:rgba(255,255,255,.8);font-size:.8rem;margin:.3rem 0 0;">
+          El documento fue guardado exitosamente.
+        </p>
+      </div>
+
+      <div class="modal-body" style="padding:1.4rem 1.8rem 1.5rem;">
+        <div class="mb-3 p-3 rounded-3"
+             style="background:#f0fdf4;border:1.5px solid #6ee7b7;">
+          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;
+                      letter-spacing:.5px;color:#065f46;margin-bottom:.3rem;">
+            Código asignado
+          </div>
+          <div id="modal-codigo-asignado"
+               style="font-size:1rem;font-weight:800;color:#059669;
+                      font-family:monospace;letter-spacing:.3px;">
+          </div>
+        </div>
+        <div style="height:4px;background:#e2e8f0;border-radius:4px;overflow:hidden;margin-bottom:1.1rem;">
+          <div id="otros-progress-bar"
+               style="height:100%;background:linear-gradient(90deg,#059669,#0f766e);
+                      width:100%;animation:cfgCountdown 3.5s linear forwards;border-radius:4px;">
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm"
+                data-bs-dismiss="modal"
+                style="background:linear-gradient(135deg,#059669,#0f766e);color:#fff;
+                       border:none;border-radius:9px;font-weight:600;padding:.4rem 1.4rem;">
+          <i class="bi bi-check2 me-1"></i> Aceptar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes drawRing  { to { stroke-dashoffset: 0; } }
+@keyframes drawCheck { to { stroke-dashoffset: 0; } }
+@keyframes cfgCountdown { from { width:100%; } to { width:0%; } }
+</style>
+
+{% endblock %}

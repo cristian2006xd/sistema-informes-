@@ -12,7 +12,7 @@ MESES = ["enero","febrero","marzo","abril","mayo","junio",
 
 PLANTILLAS = {
     "RE_ASIGNACION": {
-        "codigo": "IT-RE",
+        "codigo": "IT-A",
         "asunto": "Revisión de equipo tecnológico disponible para asignación.",
         "antecedentes": (
             "Mediante requerimiento institucional, se solicitó la entrega y configuración "

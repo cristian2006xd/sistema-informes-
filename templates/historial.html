@@ -26,10 +26,13 @@
       <a href="/informe/revision-estado"><i class="bi bi-clipboard2-pulse"></i> Revisión (Estado)</a>
       <a href="/informe/cambio-actualizacion"><i class="bi bi-arrow-repeat"></i> Cambio y Actualización</a>
       <a href="/informe/instalacion"><i class="bi bi-tools"></i> Instalación</a>
+      <a href="/informe/otros"><i class="bi bi-folder-plus"></i> Otros</a>
       {% endif %}
 
-      {% if session["rol"] in ["ADMINISTRADOR", "CONSULTA"] %}
+      {% if session["rol"] == "ADMINISTRADOR" %}
       <a href="/historial" class="active"><i class="bi bi-clock-history"></i> Historial</a>
+      {% elif session["rol"] == "CONSULTA" %}
+      <a href="/historial" class="active"><i class="bi bi-folder2-open"></i> Documentos</a>
       {% endif %}
 
       {% if session["rol"] == "ADMINISTRADOR" %}
@@ -47,85 +50,230 @@
   <main class="main-content">
 
     <div class="page-header">
+      {% if session["rol"] == "CONSULTA" %}
+      <h2><i class="bi bi-folder2-open"></i> Documentos Disponibles</h2>
+      <p>Documentos firmados disponibles para su descarga.</p>
+      {% else %}
       <h2><i class="bi bi-clock-history"></i> Historial de Informes</h2>
       <p>Registro de todos los informes técnicos generados en el sistema.</p>
+      {% endif %}
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}{% for cat,msg in messages %}
-    <div class="alert alert-{{ cat }} mb-3">{{ msg }}</div>
-    {% endfor %}{% endif %}
-    {% endwith %}
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      {% for cat, msg in messages %}
+      showToast(
+        {% if cat == 'success' %}'bi-check-circle-fill','¡Operación exitosa!','linear-gradient(135deg,#059669,#0891b2)'
+        {% elif cat == 'warning' %}'bi-exclamation-triangle-fill','Advertencia','linear-gradient(135deg,#d97706,#f59e0b)'
+        {% elif cat == 'danger' %}'bi-x-circle-fill','Error','linear-gradient(135deg,#dc2626,#ef4444)'
+        {% else %}'bi-info-circle-fill','Información','linear-gradient(135deg,#0f766e,#0891b2)'{% endif %},
+        {{ msg | tojson }}
+      );
+      {% endfor %}
+    });
+    </script>
+    {% endif %}{% endwith %}
 
     <div class="card-info">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="section-title mb-0">
+          {% if session["rol"] == "CONSULTA" %}
+          <i class="bi bi-file-earmark-check"></i> Documentos Firmados
+          {% else %}
           <i class="bi bi-journal-text"></i> Informes Generados
+          {% endif %}
         </div>
         <span class="badge bg-primary fs-6 px-3">{{ registros|length }} registros</span>
       </div>
 
+      <!-- ── FILTROS ─────────────────────────────────────────────────────── -->
+      <div class="row g-2 mb-3 align-items-center">
+        <div class="col-12 col-lg-4">
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0 px-2">
+              <i class="bi bi-search text-muted" style="font-size:.85rem;"></i>
+            </span>
+            <input type="text" id="hq" class="form-control form-control-sm border-start-0"
+                   placeholder="Buscar por número, funcionario, cargo, usuario…">
+          </div>
+        </div>
+        <div class="col-6 col-sm-4 col-lg-2">
+          <select id="h-tipo" class="form-select form-select-sm">
+            <option value="">Todos los tipos</option>
+            <option value="RE_ASIGNACION">Revisión (Asig.)</option>
+            <option value="DESCARGO">Descargo</option>
+            <option value="RE_ESTADO">Revisión (Estado)</option>
+            <option value="CAMBIO_ACTUALIZACION">Cambio / Actualiz.</option>
+            <option value="INSTALACION">Instalación</option>
+            <option value="OTROS">Otros</option>
+          </select>
+        </div>
+        <div class="col-6 col-sm-4 col-lg-2">
+          <input type="date" id="h-fecha" class="form-control form-control-sm" title="Filtrar por fecha">
+        </div>
+        {% if session["rol"] == "ADMINISTRADOR" %}
+        <div class="col-6 col-sm-4 col-lg-2">
+          <select id="h-firmado" class="form-select form-select-sm">
+            <option value="">Estado firmado</option>
+            <option value="1">Cargado</option>
+            <option value="0">Pendiente</option>
+          </select>
+        </div>
+        {% endif %}
+        <div class="col-6 col-sm-auto col-lg-auto">
+          <button type="button" id="h-clear" class="btn btn-sm w-100"
+                  style="background:linear-gradient(135deg,#64748b,#475569);color:#fff;
+                         border:none;border-radius:8px;font-weight:600;white-space:nowrap;">
+            <i class="bi bi-x-circle me-1"></i>Limpiar
+          </button>
+        </div>
+      </div>
+      <!-- ────────────────────────────────────────────────────────────────── -->
+
       <div class="table-responsive">
-        <table class="table table-hover align-middle">
+        <table class="table align-middle" style="border-collapse:separate;border-spacing:0;">
           <thead>
-            <tr>
-              <th>#</th>
-              <th>Número de Informe</th>
-              <th>Tipo</th>
-              <th>Funcionario</th>
-              <th>Cargo</th>
-              <th>Fecha</th>
-              <th>Generado por</th>
-              <th>Acción</th>
+            <tr style="background:linear-gradient(135deg,#f1f5f9,#e2e8f0);">
+              <th style="padding:.85rem 1rem;font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;width:32px;">#</th>
+              <th style="padding:.85rem 1rem;font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;">Número de Informe</th>
+              <th style="padding:.85rem 1rem;font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;">Tipo</th>
+              <th style="padding:.85rem 1rem;font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;">Funcionario</th>
+              <th style="padding:.85rem 1rem;font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;">Cargo</th>
+              <th style="padding:.85rem 1rem;font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;">Fecha</th>
+              {% if session["rol"] != "CONSULTA" %}<th style="padding:.85rem 1rem;font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;">Generado por</th>{% endif %}
+              {% if session["rol"] != "CONSULTA" %}
+              <th style="padding:.85rem 1rem;font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;text-align:center;">Firmado</th>
+              {% endif %}
+              <th style="padding:.85rem 1rem;font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#475569;border:none;border-bottom:2px solid #cbd5e1;text-align:center;">Acción</th>
             </tr>
           </thead>
           <tbody>
             {% for r in registros %}
-            <tr>
-              <td><span class="text-muted">{{ loop.index }}</span></td>
-              <td>
-                <strong style="font-size:.8rem;">{{ r.numero_informe or '—' }}</strong>
+            {% set solo_descarga = (r.ruta_firmado or r.tipo == 'OTROS') %}
+            <tr class="hist-row"
+                data-tipo="{{ r.tipo }}"
+                data-fecha="{{ r.fecha }}"
+                data-firmado="{{ '1' if r.ruta_firmado else '0' }}"
+                data-q="{{ (r.numero_informe or '') ~ ' ' ~ r.nombres ~ ' ' ~ r.cargo ~ ' ' ~ (r.usuario_creador or '') | lower }}"
+                style="border-bottom:1px solid #f1f5f9;transition:background .15s;">
+              <td style="padding:.82rem 1rem;">
+                <span style="font-size:.78rem;color:#94a3b8;font-weight:600;">{{ loop.index }}</span>
               </td>
-              <td>
+              <td style="padding:.82rem 1rem;">
+                <span style="font-size:.79rem;font-weight:700;color:#1e293b;font-family:monospace;letter-spacing:.2px;">
+                  {{ r.numero_informe or '—' }}
+                </span>
+              </td>
+              <td style="padding:.82rem 1rem;">
                 {% if r.tipo == 'RE_ASIGNACION' %}
-                <span class="badge bg-primary" style="font-size:.72rem;">Revisión (Asig.)</span>
+                <span style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;font-size:.68rem;font-weight:600;padding:.25rem .65rem;border-radius:20px;">Revisión (Asig.)</span>
                 {% elif r.tipo == 'DESCARGO' %}
-                <span class="badge" style="background:#d97706;font-size:.72rem;">Descargo</span>
+                <span style="background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;font-size:.68rem;font-weight:600;padding:.25rem .65rem;border-radius:20px;">Descargo</span>
                 {% elif r.tipo == 'RE_ESTADO' %}
-                <span class="badge bg-success" style="font-size:.72rem;">Revisión (Estado)</span>
+                <span style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:.68rem;font-weight:600;padding:.25rem .65rem;border-radius:20px;">Revisión (Estado)</span>
                 {% elif r.tipo == 'CAMBIO_ACTUALIZACION' %}
-                <span class="badge" style="background:#7c3aed;font-size:.72rem;">Cambio / Actualiz.</span>
+                <span style="background:linear-gradient(135deg,#6d28d9,#7c3aed);color:#fff;font-size:.68rem;font-weight:600;padding:.25rem .65rem;border-radius:20px;">Cambio / Actualiz.</span>
                 {% elif r.tipo == 'INSTALACION' %}
-                <span class="badge" style="background:#0891b2;font-size:.72rem;">Instalación</span>
+                <span style="background:linear-gradient(135deg,#0891b2,#06b6d4);color:#fff;font-size:.68rem;font-weight:600;padding:.25rem .65rem;border-radius:20px;">Instalación</span>
+                {% elif r.tipo == 'OTROS' %}
+                <span style="background:linear-gradient(135deg,#475569,#64748b);color:#fff;font-size:.68rem;font-weight:600;padding:.25rem .65rem;border-radius:20px;">Otros</span>
                 {% endif %}
               </td>
-              <td>{{ r.nombres }}</td>
-              <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ r.cargo }}">
+              <td style="padding:.82rem 1rem;font-size:.83rem;color:#1e293b;">{{ r.nombres }}</td>
+              <td style="padding:.82rem 1rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.8rem;color:#475569;" title="{{ r.cargo }}">
                 {{ r.cargo }}
               </td>
-              <td>{{ r.fecha }}</td>
-              <td>{{ r.usuario_creador or '—' }}</td>
-              <td>
-                <div class="d-flex gap-1 flex-wrap">
-                  {% if r.ruta_word %}
-                  <a href="/historial/{{ r.id }}/descargar" class="btn btn-success btn-sm">
-                    <i class="bi bi-file-earmark-word me-1"></i> Descargar
-                  </a>
-                  {% else %}
-                  <span class="badge bg-secondary">Sin archivo</span>
-                  {% endif %}
-                  {% if session["rol"] == "ADMINISTRADOR" %}
-                  <a href="/historial/{{ r.id }}/editar" class="btn btn-warning btn-sm text-dark">
-                    <i class="bi bi-pencil-square me-1"></i> Editar
-                  </a>
-                  {% endif %}
+              <td style="padding:.82rem 1rem;font-size:.8rem;color:#64748b;white-space:nowrap;">
+                <i class="bi bi-calendar3 me-1" style="opacity:.4;"></i>{{ r.fecha }}
+              </td>
+              {% if session["rol"] != "CONSULTA" %}
+              <td style="padding:.82rem 1rem;">
+                <div class="d-flex align-items-center gap-2">
+                  <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0f766e,#0891b2);
+                              display:flex;align-items:center;justify-content:center;
+                              color:#fff;font-size:.68rem;font-weight:700;flex-shrink:0;">
+                    {{ (r.usuario_creador or '?')[:1] | upper }}
+                  </div>
+                  <span style="font-size:.8rem;color:#374151;">{{ r.usuario_creador or '—' }}</span>
                 </div>
+              </td>
+              {% endif %}
+              {% if session["rol"] != "CONSULTA" %}
+              <td style="padding:.82rem 1rem;text-align:center;">
+                {% if r.ruta_firmado %}
+                <span style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;
+                             font-size:.68rem;font-weight:600;padding:.28rem .7rem;border-radius:20px;
+                             display:inline-flex;align-items:center;gap:.3rem;">
+                  <i class="bi bi-patch-check-fill"></i> Cargado
+                </span>
+                {% else %}
+                <span style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;
+                             font-size:.68rem;font-weight:600;padding:.28rem .7rem;border-radius:20px;">
+                  Pendiente
+                </span>
+                {% endif %}
+              </td>
+              {% endif %}
+              <td style="padding:.82rem 1rem;text-align:center;">
+                {# ── CONSULTA ── #}
+                {% if session["rol"] == "CONSULTA" %}
+                  {% set dl_url = '/historial/' ~ r.id ~ ('/descargar-otros' if r.tipo == 'OTROS' else '/descargar-firmado') %}
+                  <button type="button" class="btn-dl-solo btn-accion-descarga"
+                          data-url="{{ dl_url }}"
+                          data-numero="{{ r.numero_informe or '—' }}"
+                          data-tipo="{{ 'pdf' if r.tipo == 'OTROS' else 'firmado' }}">
+                    <i class="bi bi-file-earmark-arrow-down"></i>
+                    <span>Descargar</span>
+                  </button>
+
+                {# ── ADMIN / TECNICO con firmado o OTROS ── #}
+                {% elif r.tipo == 'OTROS' or r.ruta_firmado %}
+                  {% set dl_url = '/historial/' ~ r.id ~ ('/descargar-otros' if r.tipo == 'OTROS' else '/descargar-firmado') %}
+                  <button type="button" class="btn-dl-solo btn-accion-descarga"
+                          data-url="{{ dl_url }}"
+                          data-numero="{{ r.numero_informe or '—' }}"
+                          data-tipo="{{ 'pdf' if r.tipo == 'OTROS' else 'firmado' }}">
+                    <i class="bi bi-file-earmark-arrow-down"></i>
+                    <span>Descargar</span>
+                  </button>
+
+                {# ── ADMIN / TECNICO sin firmar ── #}
+                {% else %}
+                  <div class="d-flex gap-1 justify-content-center flex-wrap">
+                    {% if r.ruta_word %}
+                    <button type="button" class="btn btn-success btn-sm btn-accion-descarga"
+                            data-url="/historial/{{ r.id }}/descargar"
+                            data-numero="{{ r.numero_informe or '—' }}"
+                            data-tipo="word">
+                      <i class="bi bi-file-earmark-word me-1"></i> Descargar
+                    </button>
+                    {% else %}
+                    <span class="badge bg-secondary">Sin archivo</span>
+                    {% endif %}
+                    {% if session["rol"] == "ADMINISTRADOR" %}
+                    <button type="button" class="btn btn-warning btn-sm text-dark btn-accion-editar"
+                            data-url="/historial/{{ r.id }}/editar"
+                            data-numero="{{ r.numero_informe or '—' }}">
+                      <i class="bi bi-pencil-square me-1"></i> Editar
+                    </button>
+                    <button type="button" class="btn btn-sm btn-subir-fila"
+                            data-id="{{ r.id }}"
+                            data-numero="{{ r.numero_informe or '—' }}"
+                            data-bs-toggle="modal" data-bs-target="#modalSubirFirmado"
+                            style="background:linear-gradient(135deg,#0f766e,#0891b2);color:#fff;border:none;border-radius:6px;"
+                            title="Subir documento firmado">
+                      <i class="bi bi-upload"></i>
+                    </button>
+                    {% endif %}
+                  </div>
+                {% endif %}
               </td>
             </tr>
             {% else %}
             <tr>
-              <td colspan="8" class="text-center text-muted py-4">
-                <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;opacity:.3;"></i>
+              <td colspan="{{ 6 if session['rol'] == 'CONSULTA' else 9 }}" class="text-center text-muted py-5">
+                <i class="bi bi-inbox d-block mb-2" style="font-size:2.5rem;opacity:.2;"></i>
                 No existen informes generados todavía.
               </td>
             </tr>
@@ -133,8 +281,297 @@
           </tbody>
         </table>
       </div>
+
+      <style>
+        .hist-row:hover td { background:#f8faff !important; }
+        .hist-row:last-child { border-bottom:none !important; }
+
+        /* Botón solo-descarga (cuando no hay otros botones) */
+        .btn-dl-solo {
+          display: inline-flex;
+          align-items: center;
+          gap: .45rem;
+          padding: .42rem 1.1rem;
+          background: linear-gradient(135deg,#059669,#0891b2);
+          color: #fff;
+          border: none;
+          border-radius: 10px;
+          font-size: .8rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: opacity .15s, transform .15s;
+          box-shadow: 0 2px 10px rgba(5,150,105,.25);
+          letter-spacing: .2px;
+        }
+        .btn-dl-solo:hover { opacity:.88; transform:translateY(-1px); }
+        .btn-dl-solo i { font-size:.95rem; }
+      </style>
     </div>
 
   </main>
 </div>
+
+<!-- ── TOAST CONTAINER ───────────────────────────────────────────────────── -->
+<div id="toast-container"
+     style="position:fixed;bottom:1.6rem;right:1.6rem;z-index:9999;
+            display:flex;flex-direction:column;gap:.65rem;width:340px;pointer-events:none;">
+</div>
+
+<script>
+function showToast(icon, title, grad, message, duration) {
+  duration = duration || 4500;
+  const box = document.getElementById('toast-container');
+  const t   = document.createElement('div');
+  t.setAttribute('data-toast','');
+  t.style.cssText =
+    'border-radius:16px;overflow:hidden;box-shadow:0 10px 36px rgba(0,0,0,.2);' +
+    'transform:translateX(115%);transition:transform .38s cubic-bezier(.34,1.4,.64,1);' +
+    'background:#fff;pointer-events:auto;';
+  t.innerHTML =
+    '<div style="background:' + grad + ';padding:.72rem 1rem;display:flex;align-items:center;gap:.55rem;">' +
+      '<i class="bi ' + icon + '" style="font-size:1.15rem;color:#fff;flex-shrink:0;"></i>' +
+      '<span style="color:#fff;font-weight:700;font-size:.86rem;flex:1;">' + title + '</span>' +
+      '<button onclick="this.closest(\'[data-toast]\').remove()" ' +
+              'style="background:none;border:none;color:rgba(255,255,255,.75);font-size:1.25rem;' +
+                     'cursor:pointer;padding:0;line-height:1;margin-left:.3rem;">&times;</button>' +
+    '</div>' +
+    '<div style="padding:.68rem 1rem .72rem;font-size:.82rem;color:#374151;' +
+                'border-top:1px solid #f3f4f6;line-height:1.45;">' + message + '</div>' +
+    '<div style="height:3px;background:' + grad + ';animation:toastBar ' + (duration/1000) + 's linear forwards;">' +
+    '</div>';
+  box.appendChild(t);
+  requestAnimationFrame(() => requestAnimationFrame(() => t.style.transform = 'translateX(0)'));
+  setTimeout(() => {
+    t.style.transform = 'translateX(115%)';
+    setTimeout(() => t.remove(), 400);
+  }, duration);
+}
+</script>
+
+<style>
+@keyframes toastBar { from { width:100%; } to { width:0%; } }
+</style>
+
+<script>
+(function () {
+  const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+  const hq       = document.getElementById('hq');
+  const hTipo    = document.getElementById('h-tipo');
+  const hFecha   = document.getElementById('h-fecha');
+  const hFirmado = document.getElementById('h-firmado');
+  const hClear   = document.getElementById('h-clear');
+  const rows     = document.querySelectorAll('table tbody tr[data-q]');
+
+  function filtrar() {
+    const q       = norm(hq.value);
+    const tipo    = hTipo    ? hTipo.value    : '';
+    const fecha   = hFecha   ? hFecha.value   : '';
+    const firmado = hFirmado ? hFirmado.value : '';
+    rows.forEach(tr => {
+      const ok =
+        (!q       || norm(tr.dataset.q).includes(q)) &&
+        (!tipo    || tr.dataset.tipo    === tipo)     &&
+        (!fecha   || tr.dataset.fecha   === fecha)    &&
+        (!firmado || tr.dataset.firmado === firmado);
+      tr.style.display = ok ? '' : 'none';
+    });
+  }
+
+  [hq, hTipo, hFecha, hFirmado].forEach(el => {
+    if (el) { el.addEventListener('input', filtrar); el.addEventListener('change', filtrar); }
+  });
+
+  hClear?.addEventListener('click', () => {
+    [hq, hTipo, hFecha, hFirmado].forEach(el => { if (el) el.value = ''; });
+    filtrar();
+  });
+})();
+</script>
+
+<script>
+// ── Subir firmado ──────────────────────────────────────────────────────────
+document.querySelectorAll('.btn-subir-fila').forEach(btn => {
+  btn.addEventListener('click', function () {
+    document.getElementById('modal-informe-id').value = this.dataset.id;
+    document.getElementById('modal-informe-numero').textContent = this.dataset.numero;
+  });
+});
+
+// ── Descargar ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.btn-accion-descarga').forEach(btn => {
+  btn.addEventListener('click', function () {
+    const url    = this.dataset.url;
+    const numero = this.dataset.numero;
+    const tipo   = this.dataset.tipo;
+    document.getElementById('mc-desc-numero').textContent = numero;
+    document.getElementById('mc-desc-icono').className =
+      tipo === 'firmado' ? 'bi bi-patch-check-fill' : 'bi bi-file-earmark-word';
+    document.getElementById('mc-desc-tipo').textContent =
+      tipo === 'firmado' ? 'Documento firmado' : 'Archivo Word (.docx)';
+    document.getElementById('mc-desc-btn').onclick = () => {
+      window.location.href = url;
+      bootstrap.Modal.getInstance(document.getElementById('modalConfirmDescarga')).hide();
+      setTimeout(() => showToast(
+        'bi-download', 'Descarga iniciada',
+        'linear-gradient(135deg,#059669,#0891b2)',
+        'El documento <strong>' + numero + '</strong> se está descargando.'
+      ), 300);
+    };
+    new bootstrap.Modal(document.getElementById('modalConfirmDescarga')).show();
+  });
+});
+
+// ── Editar ─────────────────────────────────────────────────────────────────
+document.querySelectorAll('.btn-accion-editar').forEach(btn => {
+  btn.addEventListener('click', function () {
+    const url    = this.dataset.url;
+    const numero = this.dataset.numero;
+    document.getElementById('mc-edit-numero').textContent = numero;
+    document.getElementById('mc-edit-btn').onclick = () => {
+      window.location.href = url;
+    };
+    new bootstrap.Modal(document.getElementById('modalConfirmEditar')).show();
+  });
+});
+</script>
+
+<!-- ── MODAL CONFIRMAR DESCARGA ─────────────────────────────────────────── -->
+<div class="modal fade" id="modalConfirmDescarga" tabindex="-1" aria-modal="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content" style="border-radius:20px;border:none;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.18);">
+      <div style="background:linear-gradient(135deg,#059669 0%,#0891b2 100%);padding:1.6rem 2rem 1.3rem;text-align:center;">
+        <div style="width:58px;height:58px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;border:2px solid rgba(255,255,255,.35);">
+          <i class="bi bi-download" style="font-size:1.6rem;color:#fff;"></i>
+        </div>
+        <h5 style="color:#fff;font-weight:700;margin:0;font-size:1rem;">Descargar documento</h5>
+      </div>
+      <div class="modal-body" style="padding:1.4rem 1.8rem 1.6rem;text-align:center;">
+        <div class="mb-3 px-2 py-2 rounded-3 d-flex align-items-center gap-2"
+             style="background:#f0fdf4;border:1.5px solid #6ee7b7;font-size:.84rem;font-weight:600;color:#065f46;">
+          <i id="mc-desc-icono" class="bi bi-file-earmark-word" style="font-size:1.1rem;"></i>
+          <div class="text-start">
+            <div id="mc-desc-numero" style="font-size:.9rem;"></div>
+            <div id="mc-desc-tipo" style="font-size:.75rem;font-weight:400;opacity:.8;"></div>
+          </div>
+        </div>
+        <p style="font-size:.85rem;color:#374151;margin-bottom:1.2rem;">
+          ¿Confirma la descarga de este documento?
+        </p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button type="button" class="btn btn-outline-secondary btn-sm"
+                  data-bs-dismiss="modal" style="border-radius:9px;min-width:90px;">
+            Cancelar
+          </button>
+          <button type="button" id="mc-desc-btn" class="btn btn-sm"
+                  data-bs-dismiss="modal"
+                  style="background:linear-gradient(135deg,#059669,#0891b2);color:#fff;border:none;
+                         border-radius:9px;font-weight:600;min-width:110px;">
+            <i class="bi bi-download me-1"></i> Descargar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL CONFIRMAR EDITAR ────────────────────────────────────────────── -->
+<div class="modal fade" id="modalConfirmEditar" tabindex="-1" aria-modal="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content" style="border-radius:20px;border:none;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.18);">
+      <div style="background:linear-gradient(135deg,#d97706 0%,#f59e0b 100%);padding:1.6rem 2rem 1.3rem;text-align:center;">
+        <div style="width:58px;height:58px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;border:2px solid rgba(255,255,255,.35);">
+          <i class="bi bi-pencil-square" style="font-size:1.6rem;color:#fff;"></i>
+        </div>
+        <h5 style="color:#fff;font-weight:700;margin:0;font-size:1rem;">Editar informe</h5>
+      </div>
+      <div class="modal-body" style="padding:1.4rem 1.8rem 1.6rem;text-align:center;">
+        <div class="mb-3 px-2 py-2 rounded-3 d-flex align-items-center gap-2"
+             style="background:#fffbeb;border:1.5px solid #fbbf24;font-size:.84rem;font-weight:600;color:#92400e;">
+          <i class="bi bi-file-earmark-text" style="font-size:1.1rem;"></i>
+          <span id="mc-edit-numero"></span>
+        </div>
+        <p style="font-size:.85rem;color:#374151;margin-bottom:1.2rem;">
+          Va a ingresar al modo de edición de este informe. ¿Desea continuar?
+        </p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button type="button" class="btn btn-outline-secondary btn-sm"
+                  data-bs-dismiss="modal" style="border-radius:9px;min-width:90px;">
+            Cancelar
+          </button>
+          <button type="button" id="mc-edit-btn" class="btn btn-sm"
+                  data-bs-dismiss="modal"
+                  style="background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;border:none;
+                         border-radius:9px;font-weight:600;min-width:110px;">
+            <i class="bi bi-pencil-square me-1"></i> Editar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if session["rol"] == "ADMINISTRADOR" %}
+<!-- ── MODAL SUBIR DOCUMENTO FIRMADO ────────────────────────────────────── -->
+<div class="modal fade" id="modalSubirFirmado" tabindex="-1" aria-modal="true" aria-labelledby="modalSubirLabel">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
+    <div class="modal-content" style="border-radius:20px;border:none;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.18);">
+
+      <!-- Cabecera -->
+      <div style="background:linear-gradient(135deg,#0f766e 0%,#0891b2 100%);padding:1.8rem 2rem 1.4rem;text-align:center;">
+        <div style="width:64px;height:64px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto .9rem;border:2px solid rgba(255,255,255,.35);">
+          <i class="bi bi-upload" style="font-size:1.8rem;color:#fff;"></i>
+        </div>
+        <h5 id="modalSubirLabel" style="color:#fff;font-weight:700;margin:0;font-size:1.05rem;">Subir / Cargar documento</h5>
+        <p style="color:rgba(255,255,255,.8);font-size:.8rem;margin:.4rem 0 0;">Gestión de documentos firmados</p>
+      </div>
+
+      <div class="modal-body" style="padding:1.6rem 1.8rem;">
+
+        <!-- Recordatorio -->
+        <div class="d-flex gap-3 align-items-start p-3 mb-4 rounded-3"
+             style="background:#fffbeb;border:1.5px solid #fbbf24;">
+          <i class="bi bi-exclamation-triangle-fill" style="font-size:1.4rem;color:#d97706;flex-shrink:0;margin-top:2px;"></i>
+          <div>
+            <div style="font-weight:700;color:#92400e;font-size:.88rem;">Recuerde</div>
+            <div style="font-size:.83rem;color:#78350f;line-height:1.5;">
+              Únicamente cargue documentos <strong>debidamente firmados y aprobados</strong>. Los documentos sin firma no tienen validez institucional.
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulario -->
+        <form method="POST" action="/historial/subir-firmado" enctype="multipart/form-data">
+          <input type="hidden" name="informe_id" id="modal-informe-id">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Informe</label>
+            <div id="modal-informe-chip" class="d-flex align-items-center gap-2 px-3 py-2 rounded-3"
+                 style="background:#f0fdf4;border:1.5px solid #6ee7b7;font-size:.84rem;font-weight:600;color:#065f46;">
+              <i class="bi bi-file-earmark-text" style="font-size:1rem;"></i>
+              <span id="modal-informe-numero">—</span>
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Documento firmado <span class="text-danger">*</span></label>
+            <input type="file" name="archivo_firmado" class="form-control form-control-sm"
+                   accept=".pdf,.docx,.doc" required>
+            <div class="form-text" style="font-size:.75rem;">Formatos aceptados: PDF, Word (.docx, .doc)</div>
+          </div>
+          <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                    data-bs-dismiss="modal" style="border-radius:9px;">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-sm d-flex align-items-center gap-1"
+                    style="background:linear-gradient(135deg,#0f766e,#0891b2);color:#fff;border:none;border-radius:9px;font-weight:600;">
+              <i class="bi bi-cloud-upload"></i> Cargar documento
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

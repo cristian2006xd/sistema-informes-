@@ -137,10 +137,13 @@
       <a href="/informe/revision-estado"><i class="bi bi-clipboard2-pulse"></i> Revisión (Estado)</a>
       <a href="/informe/cambio-actualizacion"><i class="bi bi-arrow-repeat"></i> Cambio y Actualización</a>
       <a href="/informe/instalacion"><i class="bi bi-tools"></i> Instalación</a>
+      <a href="/informe/otros"><i class="bi bi-folder-plus"></i> Otros</a>
       {% endif %}
 
-      {% if session["rol"] in ["ADMINISTRADOR", "CONSULTA"] %}
+      {% if session["rol"] == "ADMINISTRADOR" %}
       <a href="/historial"><i class="bi bi-clock-history"></i> Historial</a>
+      {% elif session["rol"] == "CONSULTA" %}
+      <a href="/historial"><i class="bi bi-folder2-open"></i> Documentos</a>
       {% endif %}
 
       {% if session["rol"] == "ADMINISTRADOR" %}
@@ -573,6 +576,26 @@
                 </div>
                 <div class="card-footer border-0 text-center py-2" style="background:#ecfeff;border-radius:0 0 12px 12px;">
                   <span style="font-size:.74rem;color:#0891b2;font-weight:600;"><i class="bi bi-arrow-right-circle me-1"></i>Crear informe</span>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <div class="col-md-4 col-lg" style="min-width:180px;max-width:220px;">
+            <a href="/informe/otros" class="text-decoration-none">
+              <div class="card h-100 border-0 shadow-sm" style="border-radius:12px;cursor:pointer;transition:transform .15s,box-shadow .15s;"
+                onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(100,116,139,.18)'"
+                onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <div class="card-body text-center py-4">
+                  <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;">
+                    <i class="bi bi-folder-plus" style="font-size:1.5rem;color:#64748b;"></i>
+                  </div>
+                  <div class="badge mb-2" style="background:#64748b;font-size:.68rem;">IT-O</div>
+                  <h6 class="fw-bold mb-1" style="font-size:.82rem;color:#1e293b;line-height:1.4;">Otros documentos</h6>
+                  <p class="text-muted mb-0" style="font-size:.74rem;">Registro de documentos externos</p>
+                </div>
+                <div class="card-footer border-0 text-center py-2" style="background:#f8fafc;border-radius:0 0 12px 12px;">
+                  <span style="font-size:.74rem;color:#64748b;font-weight:600;"><i class="bi bi-arrow-right-circle me-1"></i>Subir documento</span>
                 </div>
               </div>
             </a>

@@ -123,12 +123,21 @@ def init_migrations():
         except Exception:
             pass
 
-        # Extend ENUM if DB already existed with the 3-value definition
+        # Extend ENUM to include OTROS
         try:
             cursor.execute("""
                 ALTER TABLE informes_tecnicos
                 MODIFY COLUMN tipo ENUM('RE_ASIGNACION','DESCARGO','RE_ESTADO',
-                                        'CAMBIO_ACTUALIZACION','INSTALACION') NOT NULL
+                                        'CAMBIO_ACTUALIZACION','INSTALACION','OTROS') NOT NULL
+            """)
+        except Exception:
+            pass
+
+        # Columna ruta_pdf_otros para informes tipo OTROS
+        try:
+            cursor.execute("""
+                ALTER TABLE informes_tecnicos
+                ADD COLUMN ruta_pdf_otros VARCHAR(400) DEFAULT NULL
             """)
         except Exception:
             pass
@@ -734,6 +743,134 @@ def generar_instalacion():
     return _procesar_informe("INSTALACION")
 
 
+# ── Informe tipo OTROS ────────────────────────────────────────────────────────
+
+def _siguiente_numero_informe():
+    """Devuelve el número correlativo que se asignará al próximo informe."""
+    try:
+        conn   = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        anio   = datetime.now().year
+        cursor.execute(
+            "SELECT COUNT(*) total FROM informes_tecnicos WHERE YEAR(fecha_generacion) = %s",
+            (anio,)
+        )
+        total = cursor.fetchone()["total"]
+        cursor.close()
+        conn.close()
+        return f"INAMHI-DAF-UTICS-{anio}-{str(total + 1).zfill(3)}-IT-O"
+    except Exception:
+        return "INAMHI-DAF-UTICS-????-000-IT-O"
+
+
+@app.route("/informe/otros")
+@requiere_roles("ADMINISTRADOR", "TECNICO")
+def form_otros():
+    return render_template(
+        "form_otros.html",
+        today=datetime.now().strftime("%Y-%m-%d"),
+        numero_preview=_siguiente_numero_informe(),
+        config=_get_config()
+    )
+
+
+@app.route("/informe/otros/generar", methods=["POST"])
+@requiere_roles("ADMINISTRADOR", "TECNICO")
+def generar_otros():
+    fecha    = request.form.get("fecha", "").strip()
+    nombres  = request.form.get("nombres", "").strip().upper()
+    cedula   = request.form.get("cedula", "").strip()
+    cargo    = request.form.get("cargo", "").strip().upper()
+    direccion = request.form.get("direccion", "").strip().upper()
+    archivo  = request.files.get("pdf_otros")
+
+    if not all([fecha, nombres, cedula, cargo, direccion]):
+        flash("Todos los campos son obligatorios.", "danger")
+        return redirect(url_for("form_otros"))
+    if not archivo or not archivo.filename:
+        flash("Debe adjuntar un archivo PDF.", "danger")
+        return redirect(url_for("form_otros"))
+
+    ext = os.path.splitext(secure_filename(archivo.filename))[1].lower()
+    if ext not in (".pdf",):
+        flash("Solo se aceptan archivos PDF.", "danger")
+        return redirect(url_for("form_otros"))
+
+    conn   = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        anio        = datetime.now().year
+        cursor.execute(
+            "SELECT COUNT(*) total FROM informes_tecnicos WHERE YEAR(fecha_generacion) = %s",
+            (anio,)
+        )
+        consecutivo = cursor.fetchone()["total"] + 1
+        numero      = f"INAMHI-DAF-UTICS-{anio}-{str(consecutivo).zfill(3)}-IT-O"
+
+        # Guardar PDF
+        carpeta = os.path.join("static", "uploads", "otros")
+        os.makedirs(carpeta, exist_ok=True)
+        nombre_archivo = f"otros_{int(datetime.now().timestamp()*1000)}{ext}"
+        ruta_pdf = os.path.join(carpeta, nombre_archivo).replace("\\", "/")
+        archivo.save(ruta_pdf)
+
+        cursor.execute("""
+            INSERT INTO informes_tecnicos
+                (tipo, numero_informe, fecha, nombres, cedula, cargo, direccion,
+                 usuario_id, ruta_pdf_otros)
+            VALUES ('OTROS', %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (numero, fecha, nombres, cedula, cargo, direccion,
+              session["usuario_id"], ruta_pdf))
+        conn.commit()
+
+        registrar_auditoria("Informes", "Subir OTROS",
+                            f"Informe {numero} — {nombres}")
+
+        # Calcular el siguiente número para actualizar el preview
+        cursor.execute(
+            "SELECT COUNT(*) total FROM informes_tecnicos WHERE YEAR(fecha_generacion) = %s",
+            (anio,)
+        )
+        total_nuevo = cursor.fetchone()["total"]
+        siguiente   = f"INAMHI-DAF-UTICS-{anio}-{str(total_nuevo + 1).zfill(3)}-IT-O"
+
+        if request.headers.get("Accept") == "application/json":
+            cursor.close(); conn.close()
+            return jsonify(ok=True, numero=numero, siguiente=siguiente)
+
+        flash(f"Informe registrado correctamente con código {numero}.", "success")
+    except Exception as e:
+        conn.rollback()
+        if request.headers.get("Accept") == "application/json":
+            cursor.close(); conn.close()
+            return jsonify(ok=False, error=str(e))
+        flash(f"Error al registrar el informe: {e}", "danger")
+    finally:
+        try: cursor.close(); conn.close()
+        except Exception: pass
+
+    return redirect(url_for("form_otros"))
+
+
+# ── Descarga de PDF tipo OTROS ───────────────────────────────────────────────
+
+@app.route("/historial/<int:informe_id>/descargar-otros")
+@requiere_roles("ADMINISTRADOR", "TECNICO", "CONSULTA")
+def descargar_otros(informe_id):
+    conn   = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT ruta_pdf_otros, numero_informe FROM informes_tecnicos WHERE id = %s",
+                   (informe_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not row or not row["ruta_pdf_otros"]:
+        flash("Archivo no encontrado.", "danger")
+        return redirect(url_for("historial"))
+    return send_file(row["ruta_pdf_otros"], as_attachment=True,
+                     download_name=f"{row['numero_informe']}.pdf")
+
+
 # ── Edición de informes (solo ADMINISTRADOR) ──────────────────────────────────
 
 @app.route("/historial/<int:informe_id>/editar")
@@ -791,6 +928,8 @@ def historial():
             it.nombres,
             it.cargo,
             it.ruta_word,
+            it.ruta_firmado,
+            it.ruta_pdf_otros,
             it.fecha_generacion,
             u.usuario AS usuario_creador
         FROM informes_tecnicos it
@@ -801,7 +940,72 @@ def historial():
     cursor.close()
     conn.close()
 
+    if session.get("rol") == "CONSULTA":
+        registros = [r for r in registros if r.get("ruta_firmado")]
+
     return render_template("historial.html", registros=registros)
+
+
+@app.route("/historial/subir-firmado", methods=["POST"])
+@requiere_roles("ADMINISTRADOR")
+def subir_firmado():
+    informe_id = request.form.get("informe_id", "").strip()
+    archivo    = request.files.get("archivo_firmado")
+    if not informe_id or not archivo or not archivo.filename:
+        flash("Seleccione un informe y un archivo.", "danger")
+        return redirect(url_for("historial"))
+
+    ext = os.path.splitext(archivo.filename)[1].lower()
+    if ext not in (".pdf", ".docx", ".doc"):
+        flash("Solo se permiten archivos PDF o Word.", "danger")
+        return redirect(url_for("historial"))
+
+    folder = os.path.join("static", "firmados")
+    os.makedirs(folder, exist_ok=True)
+    nombre   = f"firmado_{informe_id}{ext}"
+    ruta_abs = os.path.join(folder, nombre)
+    archivo.save(ruta_abs)
+    ruta_rel = f"firmados/{nombre}"
+
+    conn   = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE informes_tecnicos SET ruta_firmado = %s WHERE id = %s",
+        (ruta_rel, informe_id)
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    flash("Documento firmado cargado exitosamente.", "success")
+    return redirect(url_for("historial"))
+
+
+@app.route("/historial/<int:informe_id>/descargar-firmado")
+@requiere_roles("ADMINISTRADOR", "CONSULTA")
+def descargar_firmado(informe_id):
+    conn   = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT numero_informe, ruta_firmado FROM informes_tecnicos WHERE id = %s",
+        (informe_id,)
+    )
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if not row or not row["ruta_firmado"]:
+        flash("Documento firmado no disponible.", "danger")
+        return redirect(url_for("historial"))
+
+    ruta = os.path.join("static", row["ruta_firmado"])
+    if not os.path.exists(ruta):
+        flash("El archivo no existe en el servidor.", "danger")
+        return redirect(url_for("historial"))
+
+    ext = os.path.splitext(ruta)[1]
+    return send_file(ruta, as_attachment=True,
+                     download_name=f"{row['numero_informe']}_firmado{ext}")
 
 
 @app.route("/historial/<int:informe_id>/descargar")

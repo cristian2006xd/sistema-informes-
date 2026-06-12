@@ -99,11 +99,23 @@
       <p>Imágenes y datos institucionales que aparecen en los informes Word generados.</p>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}{% for cat,msg in messages %}
-    <div class="alert alert-{{ cat }} mb-3">{{ msg }}</div>
-    {% endfor %}{% endif %}
-    {% endwith %}
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      {% for cat, msg in messages %}
+        {% if cat == 'success' %}
+        new bootstrap.Modal(document.getElementById('modalGuardado')).show();
+        {% else %}
+        showToast(
+          {% if cat == 'warning' %}'bi-exclamation-triangle-fill','Advertencia','linear-gradient(135deg,#d97706,#f59e0b)'
+          {% else %}'bi-x-circle-fill','Error','linear-gradient(135deg,#dc2626,#ef4444)'{% endif %},
+          {{ msg | tojson }}
+        );
+        {% endif %}
+      {% endfor %}
+    });
+    </script>
+    {% endif %}{% endwith %}
 
     <form method="POST" action="/configuracion" enctype="multipart/form-data">
 
@@ -192,55 +204,13 @@
         </div>
       </div>
 
-      <!-- ELABORADO / APROBADO -->
-      <div class="card-info mb-4">
-        <div class="section-title"><i class="bi bi-person-vcard"></i> Sección ELABORADO / APROBADO</div>
-        <p class="text-muted mb-3" style="font-size:.82rem;">
-          Datos que aparecen en la tabla de firmas al final del informe.
-        </p>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <div class="p-3 rounded" style="border:1px solid #bfdbfe;background:#f0f7ff;">
-              <div class="fw-bold mb-3" style="color:#1d4ed8;font-size:.82rem;">
-                <i class="bi bi-pencil-square me-1"></i> ELABORADO POR
-              </div>
-              <div class="mb-2">
-                <label class="form-label form-label-sm fw-semibold text-secondary">Nombre / Título</label>
-                <input type="text" name="elaborado_nombre" class="form-control form-control-sm"
-                       value="{{ config.get('elaborado_nombre','') }}" placeholder="Ej: TÉCNICO DE TICS">
-              </div>
-              <div>
-                <label class="form-label form-label-sm fw-semibold text-secondary">Cargo</label>
-                <input type="text" name="elaborado_cargo" class="form-control form-control-sm"
-                       value="{{ config.get('elaborado_cargo','') }}" placeholder="Ej: TÉCNICO">
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="p-3 rounded" style="border:1px solid #a7f3d0;background:#f0fff8;">
-              <div class="fw-bold mb-3" style="color:#065f46;font-size:.82rem;">
-                <i class="bi bi-patch-check me-1"></i> APROBADO POR
-              </div>
-              <div class="mb-2">
-                <label class="form-label form-label-sm fw-semibold text-secondary">Nombre / Título</label>
-                <input type="text" name="aprobado_nombre" class="form-control form-control-sm"
-                       value="{{ config.get('aprobado_nombre','') }}" placeholder="Ej: DIRECTOR/A DAF">
-              </div>
-              <div>
-                <label class="form-label form-label-sm fw-semibold text-secondary">Cargo</label>
-                <input type="text" name="aprobado_cargo" class="form-control form-control-sm"
-                       value="{{ config.get('aprobado_cargo','') }}" placeholder="Ej: DIRECTOR/A">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" id="btn-guardar-cfg" class="btn btn-primary"
+                style="background:linear-gradient(135deg,#0f766e,#0891b2);border:none;border-radius:10px;
+                       font-weight:600;padding:.5rem 1.3rem;">
           <i class="bi bi-floppy me-1"></i> Guardar configuración
         </button>
-        <a href="/dashboard" class="btn btn-secondary">
+        <a href="/dashboard" class="btn btn-secondary" style="border-radius:10px;">
           <i class="bi bi-x-lg me-1"></i> Cancelar
         </a>
       </div>
@@ -249,6 +219,122 @@
 
   </main>
 </div>
+
+<!-- ── TOAST CONTAINER ───────────────────────────────────────────────────── -->
+<div id="toast-container"
+     style="position:fixed;bottom:1.6rem;right:1.6rem;z-index:9999;
+            display:flex;flex-direction:column;gap:.65rem;width:340px;pointer-events:none;">
+</div>
+
+<!-- ── MODAL ÉXITO GUARDADO ─────────────────────────────────────────────── -->
+<div class="modal fade" id="modalGuardado" tabindex="-1" aria-modal="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
+    <div class="modal-content"
+         style="border-radius:22px;border:none;overflow:hidden;
+                box-shadow:0 20px 60px rgba(0,0,0,.18);text-align:center;">
+
+      <div style="background:linear-gradient(135deg,#059669 0%,#0f766e 100%);
+                  padding:2.2rem 2rem 1.8rem;">
+        <!-- Círculo animado con visto -->
+        <div class="check-circle" style="margin:0 auto 1rem;">
+          <svg viewBox="0 0 52 52" style="width:72px;height:72px;">
+            <circle class="check-circle__ring" cx="26" cy="26" r="23"
+                    fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+            <circle class="check-circle__fill" cx="26" cy="26" r="23"
+                    fill="none" stroke="#fff" stroke-width="3"
+                    stroke-dasharray="145" stroke-dashoffset="145"
+                    style="transform:rotate(-90deg);transform-origin:center;
+                           animation:drawRing .55s ease forwards .1s;"/>
+            <polyline class="check-circle__check" points="14,27 22,35 38,19"
+                      fill="none" stroke="#fff" stroke-width="3.5"
+                      stroke-linecap="round" stroke-linejoin="round"
+                      stroke-dasharray="30" stroke-dashoffset="30"
+                      style="animation:drawCheck .35s ease forwards .6s;"/>
+          </svg>
+        </div>
+        <h5 style="color:#fff;font-weight:700;margin:0;font-size:1.1rem;">
+          ¡Configuración guardada!
+        </h5>
+        <p style="color:rgba(255,255,255,.8);font-size:.82rem;margin:.4rem 0 0;">
+          Los cambios se aplicarán en los próximos informes generados.
+        </p>
+      </div>
+
+      <div class="modal-body" style="padding:1.3rem 1.8rem 1.5rem;">
+        <!-- Barra de progreso de cierre automático -->
+        <div style="height:4px;background:#e2e8f0;border-radius:4px;overflow:hidden;margin-bottom:1.1rem;">
+          <div id="cfg-progress-bar"
+               style="height:100%;background:linear-gradient(90deg,#059669,#0f766e);
+                      width:100%;animation:cfgCountdown 3s linear forwards;border-radius:4px;">
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm"
+                data-bs-dismiss="modal"
+                style="background:linear-gradient(135deg,#059669,#0f766e);color:#fff;
+                       border:none;border-radius:9px;font-weight:600;padding:.4rem 1.4rem;">
+          <i class="bi bi-check2 me-1"></i> Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes drawRing  { to { stroke-dashoffset: 0; } }
+@keyframes drawCheck { to { stroke-dashoffset: 0; } }
+@keyframes cfgCountdown { from { width:100%; } to { width:0%; } }
+@keyframes toastBar  { from { width:100%; } to { width:0%; } }
+</style>
+
+<script>
+function showToast(icon, title, grad, message, duration) {
+  duration = duration || 4500;
+  const box = document.getElementById('toast-container');
+  const t   = document.createElement('div');
+  t.setAttribute('data-toast','');
+  t.style.cssText =
+    'border-radius:16px;overflow:hidden;box-shadow:0 10px 36px rgba(0,0,0,.2);' +
+    'transform:translateX(115%);transition:transform .38s cubic-bezier(.34,1.4,.64,1);' +
+    'background:#fff;pointer-events:auto;';
+  t.innerHTML =
+    '<div style="background:' + grad + ';padding:.72rem 1rem;display:flex;align-items:center;gap:.55rem;">' +
+      '<i class="bi ' + icon + '" style="font-size:1.15rem;color:#fff;flex-shrink:0;"></i>' +
+      '<span style="color:#fff;font-weight:700;font-size:.86rem;flex:1;">' + title + '</span>' +
+      '<button onclick="this.closest(\'[data-toast]\').remove()" ' +
+              'style="background:none;border:none;color:rgba(255,255,255,.75);font-size:1.25rem;' +
+                     'cursor:pointer;padding:0;line-height:1;">&times;</button>' +
+    '</div>' +
+    '<div style="padding:.68rem 1rem .72rem;font-size:.82rem;color:#374151;' +
+                'border-top:1px solid #f3f4f6;">' + message + '</div>' +
+    '<div style="height:3px;background:' + grad + ';animation:toastBar ' + (duration/1000) + 's linear forwards;"></div>';
+  box.appendChild(t);
+  requestAnimationFrame(() => requestAnimationFrame(() => t.style.transform = 'translateX(0)'));
+  setTimeout(() => {
+    t.style.transform = 'translateX(115%)';
+    setTimeout(() => t.remove(), 400);
+  }, duration);
+}
+
+// Auto-cerrar modal de éxito tras 3 s
+document.addEventListener('DOMContentLoaded', function() {
+  const m = document.getElementById('modalGuardado');
+  m.addEventListener('shown.bs.modal', function() {
+    setTimeout(() => bootstrap.Modal.getInstance(m)?.hide(), 3000);
+  });
+  // Reset animación SVG cada vez que se abre el modal
+  m.addEventListener('show.bs.modal', function() {
+    const bar = document.getElementById('cfg-progress-bar');
+    if (bar) { bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = ''; }
+  });
+});
+
+// Loading en botón guardar
+document.querySelector('form').addEventListener('submit', function() {
+  const btn = document.getElementById('btn-guardar-cfg');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando…';
+});
+</script>
 
 <script>
   function previewImg(input, prevId, placeholderId, wrapId) {
