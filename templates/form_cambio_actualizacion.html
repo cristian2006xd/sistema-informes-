@@ -20,11 +20,9 @@
 
     <div class="sidebar-brand">
 
-      <div class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></div>
-
-      <div class="sidebar-brand-name">INAMHI TICS</div>
-
-      <div class="sidebar-brand-sub">Sistema de Informes</div>
+      <div class="sidebar-brand-icon">
+        <img src="{{ url_for('static', filename='img/logo_sidebar.png') }}" alt="INAMHI" style="width:150px;height:auto;display:block;margin-left:-20px;">
+      </div>
 
     </div>
 
@@ -445,7 +443,17 @@
 
           (<em>"En atención al requerimiento realizado, se ejecutaron actividades de cambio y actualización..."</em>). Máximo <strong>1 foto</strong>.
 
-        </p>
+        </p>        {% if modo_edicion is defined and modo_edicion and fotos_grupo1 is defined and fotos_grupo1 %}
+        <div class="mb-2">
+          <small class="text-muted fw-semibold"><i class="bi bi-images me-1"></i>Foto actual:</small>
+          <div class="d-flex gap-2 mt-1 flex-wrap">
+            {% for f in fotos_grupo1 %}
+            <img src="/static/{{ f.ruta_archivo }}" style="height:80px;width:80px;object-fit:cover;border-radius:8px;border:2px solid #dee2e6;">
+            {% endfor %}
+          </div>
+          <small class="text-muted" style="font-size:.75rem;">Sube un nuevo archivo para reemplazarla.</small>
+        </div>
+        {% endif %}
 
         <input type="file" name="fotos_grupo_1[]" class="form-control" accept="image/*"
 
@@ -613,6 +621,7 @@
 
 <script>
 
+  const FOTOS_POR_BIEN_PREFILL = {% if fotos_por_bien is defined %}{{ fotos_por_bien | tojson }}{% else %}{}{% endif %};
   const BIENES_PREFILL = {% if bienes is defined and bienes %}{{ bienes | tojson }}{% else %}null{% endif %};
 
 
@@ -933,11 +942,28 @@
 
 
 
+  function mostrarFotosBienExistentes(bienIdx, fotos) {
+    const rows = document.querySelectorAll('.bien-row');
+    const row  = rows[bienIdx];
+    if (!row || !fotos || !fotos.length) return;
+    const photoDiv = row.querySelector('.col-md-8');
+    if (!photoDiv) return;
+    const prev = document.createElement('div');
+    prev.className = 'mb-2 fotos-existentes-preview';
+    prev.innerHTML = '<small class="text-muted fw-semibold"><i class="bi bi-camera me-1"></i>Fotos actuales:</small>' +
+      '<div class="d-flex gap-2 mt-1 flex-wrap">' +
+      fotos.map(function(f){ return '<img src="/static/' + f.ruta_archivo + '" style="height:70px;width:70px;object-fit:cover;border-radius:6px;border:2px solid #dee2e6;">'; }).join('') +
+      '</div><small class="text-muted" style="font-size:.75rem;">Sube nuevas fotos para reemplazarlas.</small>';
+    photoDiv.insertBefore(prev, photoDiv.querySelector('.form-control'));
+  }
   document.addEventListener('DOMContentLoaded', () => {
 
     if (BIENES_PREFILL && BIENES_PREFILL.length > 0) {
 
-      BIENES_PREFILL.forEach(b => agregarBien(b));
+      BIENES_PREFILL.forEach(function(b, idx) {
+        agregarBien(b);
+        if (FOTOS_POR_BIEN_PREFILL[idx]) mostrarFotosBienExistentes(idx, FOTOS_POR_BIEN_PREFILL[idx]);
+      });
 
     } else {
 
@@ -1028,5 +1054,60 @@
 
 </div>
 
-{% endblock %}
+<script>
+/* Validaciones campos TECNICO */
+(function () {
+  function markError(el, msg) {
+    el.classList.add('is-invalid');
+    var fb = el.parentNode.querySelector('.val-feedback');
+    if (!fb) { fb = document.createElement('div'); fb.className = 'invalid-feedback val-feedback'; el.parentNode.appendChild(fb); }
+    fb.textContent = msg;
+  }
+  function clearError(el) {
+    el.classList.remove('is-invalid');
+    var fb = el.parentNode.querySelector('.val-feedback');
+    if (fb) fb.remove();
+  }
+  ['nombres','cargo','direccion'].forEach(function(name) {
+    var el = document.querySelector('[name="' + name + '"]');
+    if (!el) return;
+    el.addEventListener('keypress', function(e) {
+      if (/\d/.test(e.key)) { e.preventDefault(); markError(el, 'No se permiten números en este campo.'); }
+    });
+    el.addEventListener('input', function() {
+      if (/\d/.test(el.value)) { el.value = el.value.replace(/\d/g,''); markError(el, 'No se permiten números en este campo.'); }
+      else clearError(el);
+    });
+  });
+  var cedEl = document.querySelector('[name="cedula"]');
+  if (cedEl) {
+    cedEl.setAttribute('maxlength','10');
+    cedEl.addEventListener('keypress', function(e) {
+      if (!/\d/.test(e.key)) { e.preventDefault(); markError(cedEl, 'Solo se permiten números.'); }
+      else if (cedEl.value.length >= 10) { e.preventDefault(); markError(cedEl, 'Máximo 10 dígitos.'); }
+      else clearError(cedEl);
+    });
+    cedEl.addEventListener('input', function() {
+      cedEl.value = cedEl.value.replace(/\D/g,'').slice(0,10);
+      if (cedEl.value.length > 0 && cedEl.value.length < 10) markError(cedEl, 'La cédula debe tener exactamente 10 dígitos.');
+      else clearError(cedEl);
+    });
+  }
+  var form = document.querySelector('form[method="POST"]');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      var valid = true;
+      ['nombres','cargo','direccion'].forEach(function(name) {
+        var el = document.querySelector('[name="' + name + '"]');
+        if (el && /\d/.test(el.value)) { markError(el, 'No se permiten números en este campo.'); valid = false; }
+      });
+      if (cedEl && !/^\d{10}$/.test(cedEl.value.trim())) {
+        markError(cedEl, 'La cédula debe tener exactamente 10 dígitos.'); valid = false;
+      }
+      if (!valid) { e.preventDefault(); e.stopImmediatePropagation(); return false; }
+    }, true);
+  }
+})();
+</script>
 
+{% endblock %}

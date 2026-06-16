@@ -84,9 +84,26 @@ def init_migrations():
                 direccion VARCHAR(250) NOT NULL,
                 usuario_id INT,
                 ruta_word VARCHAR(400),
+                ruta_firmado VARCHAR(400),
+                ruta_pdf_otros VARCHAR(400),
+                elaborado_nombre VARCHAR(200),
+                elaborado_cargo VARCHAR(150),
+                aprobado_nombre VARCHAR(200),
+                aprobado_cargo VARCHAR(150),
                 fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """)
+        # Migración: agregar columnas si ya existe la tabla sin ellas
+        for col_sql in [
+            "ALTER TABLE informes_tecnicos ADD COLUMN elaborado_nombre VARCHAR(200)",
+            "ALTER TABLE informes_tecnicos ADD COLUMN elaborado_cargo VARCHAR(150)",
+            "ALTER TABLE informes_tecnicos ADD COLUMN aprobado_nombre VARCHAR(200)",
+            "ALTER TABLE informes_tecnicos ADD COLUMN aprobado_cargo VARCHAR(150)",
+        ]:
+            try:
+                cursor.execute(col_sql)
+            except Exception:
+                pass  # columna ya existe
 
         # -- it_bienes
         cursor.execute("""
@@ -356,6 +373,10 @@ def _procesar_informe(tipo):
     cargo     = request.form.get("cargo",   "").strip()
     direccion = request.form.get("direccion", "").strip()
     fecha     = request.form.get("fecha", "")
+    elab_nombre = request.form.get("elaborado_nombre", "").strip() or None
+    elab_cargo  = request.form.get("elaborado_cargo",  "").strip() or None
+    apro_nombre = request.form.get("aprobado_nombre",  "").strip() or None
+    apro_cargo  = request.form.get("aprobado_cargo",   "").strip() or None
 
     tipo_equipo_l    = request.form.getlist("tipo_equipo[]")
     marca_l          = request.form.getlist("marca[]")
@@ -407,7 +428,7 @@ def _procesar_informe(tipo):
     try:
         anio  = datetime.now().year
         codigo_map = {
-            "RE_ASIGNACION":       "RE",
+            "RE_ASIGNACION":       "A",
             "DESCARGO":            "D",
             "RE_ESTADO":           "RE",
             "CAMBIO_ACTUALIZACION":"CA",
@@ -422,9 +443,11 @@ def _procesar_informe(tipo):
 
         cursor.execute("""
             INSERT INTO informes_tecnicos
-                (tipo, numero_informe, fecha, nombres, cedula, cargo, direccion, usuario_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (tipo, numero, fecha, nombres, cedula, cargo, direccion, session["usuario_id"]))
+                (tipo, numero_informe, fecha, nombres, cedula, cargo, direccion, usuario_id,
+                 elaborado_nombre, elaborado_cargo, aprobado_nombre, aprobado_cargo)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (tipo, numero, fecha, nombres, cedula, cargo, direccion, session["usuario_id"],
+              elab_nombre, elab_cargo, apro_nombre, apro_cargo))
         informe_id = cursor.lastrowid
 
         for b in bienes:
@@ -625,10 +648,29 @@ def _procesar_edicion_informe(informe_id):
         # Config + override firma
         cursor.execute("SELECT clave, valor FROM configuracion_sistema")
         config = {r["clave"]: r["valor"] for r in cursor.fetchall()}
-        for key in ("elaborado_nombre", "elaborado_cargo", "aprobado_nombre", "aprobado_cargo"):
-            val = request.form.get(key, "").strip()
+        elab_n = request.form.get("elaborado_nombre", "").strip() or None
+        elab_c = request.form.get("elaborado_cargo",  "").strip() or None
+        apro_n = request.form.get("aprobado_nombre",  "").strip() or None
+        apro_c = request.form.get("aprobado_cargo",   "").strip() or None
+
+        # Guardar por informe
+        cursor.execute("""
+            UPDATE informes_tecnicos
+            SET elaborado_nombre=%s, elaborado_cargo=%s,
+                aprobado_nombre=%s,  aprobado_cargo=%s
+            WHERE id=%s
+        """, (elab_n, elab_c, apro_n, apro_c, informe_id))
+
+        # Actualizar config global solo si se proporcionaron valores
+        for key, val in (("elaborado_nombre", elab_n), ("elaborado_cargo", elab_c),
+                         ("aprobado_nombre",  apro_n), ("aprobado_cargo",  apro_c)):
             if val:
                 config[key] = val
+                cursor.execute("""
+                    INSERT INTO configuracion_sistema (clave, valor, descripcion)
+                    VALUES (%s, %s, %s)
+                    ON DUPLICATE KEY UPDATE valor = %s
+                """, (key, val, key, val))
 
         # Recuperar fotos actuales para regenerar
         cursor.execute("SELECT bien_idx, ruta_archivo FROM it_fotos WHERE informe_id=%s ORDER BY id", (informe_id,))
@@ -887,19 +929,36 @@ def editar_informe(informe_id):
         return redirect(url_for("historial"))
     cursor.execute("SELECT * FROM it_bienes WHERE informe_id = %s ORDER BY id", (informe_id,))
     bienes = cursor.fetchall()
+    cursor.execute("SELECT * FROM it_fotos WHERE informe_id = %s ORDER BY id", (informe_id,))
+    fotos_all = cursor.fetchall()
     cursor.close()
     conn.close()
+
+    fotos_grupo1 = [f for f in fotos_all if f["bien_idx"] == -1]
+    fotos_grupo2 = [f for f in fotos_all if f["bien_idx"] == -2]
+    fotos_por_bien = {}
+    for f in fotos_all:
+        if f["bien_idx"] >= 0:
+            fotos_por_bien.setdefault(f["bien_idx"], []).append(f)
 
     # Convertir fecha a string para el input[type=date]
     if informe.get("fecha"):
         informe["fecha"] = str(informe["fecha"])
 
+    config = _get_config()
+    for key in ("elaborado_nombre", "elaborado_cargo", "aprobado_nombre", "aprobado_cargo"):
+        if informe.get(key):
+            config[key] = informe[key]
+
     tmpl = TIPO_TEMPLATES.get(informe["tipo"], "form_re_asignacion.html")
     return render_template(tmpl,
                            today=informe["fecha"],
-                           config=_get_config(),
+                           config=config,
                            informe=informe,
                            bienes=bienes,
+                           fotos_grupo1=fotos_grupo1,
+                           fotos_grupo2=fotos_grupo2,
+                           fotos_por_bien=fotos_por_bien,
                            modo_edicion=True,
                            informe_id=informe_id)
 
@@ -1084,7 +1143,7 @@ def usuarios():
         ORDER BY u.id DESC
     """)
     usuarios_list = cursor.fetchall()
-    cursor.execute("SELECT * FROM roles ORDER BY nombre")
+    cursor.execute("SELECT * FROM roles WHERE nombre != 'AUDITOR' ORDER BY nombre")
     roles = cursor.fetchall()
     cursor.close()
     conn.close()

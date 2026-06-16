@@ -2,48 +2,189 @@
 
 {% block content %}
 <div class="login-page">
-    <div class="login-card">
+  <!-- Fondo con blur -->
+  <div class="login-bg"
+       style="background-image:url('{{ url_for('static', filename='img/bg_login.avif') }}');"></div>
+  <div class="login-bg-overlay"></div>
+  <div class="login-split-card">
 
-        <div class="login-logo">
-            <i class="bi bi-shield-check"></i>
+    <!-- ── PANEL IZQUIERDO: Formulario ─────────────────────────── -->
+    <div class="login-left">
+
+      <!-- Logo INAMHI -->
+      <div class="inamhi-logo-badge">
+        <img src="{{ url_for('static', filename='img/logo_inamhi.png') }}"
+             alt="INAMHI" style="height:90px;width:auto;object-fit:contain;">
+      </div>
+
+      <h2 class="login-title">¡Bienvenido!</h2>
+      <p class="login-sub">Sistema de Informes TICS<br>
+        <span>INAMHI &mdash; Acceso institucional</span>
+      </p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} w-100 py-2 px-3" style="font-size:.82rem;border-radius:10px;">
+              <i class="bi bi-exclamation-circle me-1"></i>{{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" class="w-100">
+        <div class="mb-3">
+          <label class="lbl-login">Usuario</label>
+          <div class="input-group login-igroup">
+            <span class="input-group-text login-igroup-icon">
+              <i class="bi bi-person-fill"></i>
+            </span>
+            <input type="text" name="usuario" class="form-control login-icontrol"
+                   placeholder="Ingrese su usuario" required autofocus>
+          </div>
         </div>
 
-        <h3>Sistema de Informes TICS</h3>
-        <p class="login-subtitle">INAMHI &mdash; Acceso institucional</p>
+        <div class="mb-4">
+          <label class="lbl-login">Contraseña</label>
+          <div class="input-group login-igroup">
+            <span class="input-group-text login-igroup-icon">
+              <i class="bi bi-lock-fill"></i>
+            </span>
+            <input type="password" name="password" class="form-control login-icontrol"
+                   placeholder="Ingrese su contraseña" required>
+          </div>
+        </div>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} mb-3">
-                        <i class="bi bi-exclamation-circle me-1"></i>{{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        <button type="submit" class="btn btn-login-new w-100">
+          <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar al sistema
+        </button>
+      </form>
 
-        <form method="POST">
-            <div class="mb-3">
-                <label class="form-label">
-                    <i class="bi bi-person me-1"></i>Usuario
-                </label>
-                <input type="text" name="usuario" class="form-control" placeholder="Ingrese su usuario" required autofocus>
-            </div>
-
-            <div class="mb-4">
-                <label class="form-label">
-                    <i class="bi bi-lock me-1"></i>Contraseña
-                </label>
-                <input type="password" name="password" class="form-control" placeholder="Ingrese su contraseña" required>
-            </div>
-
-            <button type="submit" class="btn btn-login btn-primary w-100">
-                <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar al sistema
-            </button>
-        </form>
-
-        <p class="text-center text-muted mt-3 mb-0" style="font-size:0.72rem;">
-            Instituto Nacional de Meteorología e Hidrología &bull; TICS
-        </p>
+      <p class="login-footer-txt">
+        Instituto Nacional de Meteorología e Hidrología &bull; DAF &bull; TICS
+      </p>
     </div>
+
+    <!-- ── PANEL DERECHO: Ilustración ─────────────────────────── -->
+    <div class="login-right">
+      <svg viewBox="0 0 420 400" xmlns="http://www.w3.org/2000/svg" class="login-svg-ilu">
+
+        <!-- Círculos decorativos de fondo -->
+        <circle cx="350" cy="70"  r="60" fill="#dbeafe" opacity="0.55"/>
+        <circle cx="65"  cy="330" r="45" fill="#e0f2fe" opacity="0.45"/>
+        <circle cx="390" cy="310" r="30" fill="#e0f2fe" opacity="0.35"/>
+
+        <!-- ── Ventana / visor de documento (centro) ── -->
+        <rect x="100" y="40" width="230" height="280" rx="14"
+              fill="white" filter="drop-shadow(0 10px 28px rgba(26,58,108,0.18))"/>
+        <!-- Barra de título -->
+        <rect x="100" y="40"  width="230" height="40" rx="14" fill="#1a3a6c"/>
+        <rect x="100" y="66"  width="230" height="14" fill="#1a3a6c"/>
+        <!-- Dots de ventana -->
+        <circle cx="122" cy="60" r="5.5" fill="#ef4444" opacity="0.85"/>
+        <circle cx="139" cy="60" r="5.5" fill="#f59e0b" opacity="0.85"/>
+        <circle cx="156" cy="60" r="5.5" fill="#10b981" opacity="0.85"/>
+        <!-- Título del documento -->
+        <rect x="148" y="96"  width="134" height="8"  rx="4"   fill="#1e293b" opacity="0.18"/>
+        <rect x="162" y="110" width="106" height="5.5" rx="2.5" fill="#1e293b" opacity="0.1"/>
+        <!-- Separador -->
+        <rect x="118" y="124" width="194" height="1.5" fill="#e2e8f0"/>
+        <!-- Sección 1 -->
+        <rect x="118" y="133" width="80" height="5.5" rx="2.5" fill="#1a3a6c" opacity="0.35"/>
+        <rect x="118" y="145" width="194" height="4"   rx="2"   fill="#e2e8f0"/>
+        <rect x="118" y="154" width="170" height="4"   rx="2"   fill="#e2e8f0"/>
+        <rect x="118" y="163" width="185" height="4"   rx="2"   fill="#e2e8f0"/>
+        <!-- Sección 2 -->
+        <rect x="118" y="178" width="80" height="5.5" rx="2.5" fill="#1a3a6c" opacity="0.35"/>
+        <rect x="118" y="190" width="194" height="4"   rx="2"   fill="#e2e8f0"/>
+        <rect x="118" y="199" width="145" height="4"   rx="2"   fill="#e2e8f0"/>
+        <rect x="118" y="208" width="175" height="4"   rx="2"   fill="#e2e8f0"/>
+        <rect x="118" y="217" width="160" height="4"   rx="2"   fill="#e2e8f0"/>
+        <!-- Sección 3 -->
+        <rect x="118" y="232" width="80" height="5.5" rx="2.5" fill="#1a3a6c" opacity="0.35"/>
+        <rect x="118" y="244" width="194" height="4"   rx="2"   fill="#e2e8f0"/>
+        <rect x="118" y="253" width="130" height="4"   rx="2"   fill="#e2e8f0"/>
+        <!-- Firmas -->
+        <rect x="118" y="270" width="88" height="32" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>
+        <rect x="214" y="270" width="88" height="32" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>
+
+        <!-- ── Escudo / Seguridad (flotando a la izquierda) ── -->
+        <g transform="translate(32,138)">
+          <path d="M30 2 L4 12 L4 30 C4 43 15 53 30 60 C45 53 56 43 56 30 L56 12 Z"
+                fill="#1a3a6c" filter="drop-shadow(0 5px 14px rgba(26,58,108,0.35))"/>
+          <!-- Ícono candado -->
+          <rect x="20" y="30" width="20" height="16" rx="3.5" fill="white" opacity="0.92"/>
+          <path d="M23 30 L23 25 C23 21.1 26.6 18 30 18 C33.4 18 37 21.1 37 25 L37 30"
+                stroke="white" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <circle cx="30" cy="38" r="3" fill="#1a3a6c"/>
+        </g>
+
+        <!-- ── Badge "Firmado" flotando arriba derecha ── -->
+        <g transform="translate(302,56)">
+          <rect width="82" height="40" rx="10" fill="white"
+                filter="drop-shadow(0 4px 12px rgba(0,0,0,0.12))"/>
+          <circle cx="20" cy="20" r="10" fill="#10b981"/>
+          <path d="M15 20 L18.5 23.5 L25 16" stroke="white" stroke-width="2.2"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="36" y="13" width="36" height="5"   rx="2.5" fill="#e2e8f0"/>
+          <rect x="36" y="22" width="26" height="4"   rx="2"   fill="#e2e8f0"/>
+        </g>
+
+        <!-- ── Documento pequeño flotando abajo izquierda ── -->
+        <g transform="translate(14,228)">
+          <rect width="74" height="96" rx="10" fill="white"
+                filter="drop-shadow(0 4px 12px rgba(0,0,0,0.1))"/>
+          <rect width="74" height="24" rx="10" fill="#2563eb"/>
+          <rect y="14" width="74" height="10" fill="#2563eb"/>
+          <rect x="9" y="30" width="56" height="4"   rx="2"   fill="#e2e8f0"/>
+          <rect x="9" y="39" width="44" height="4"   rx="2"   fill="#e2e8f0"/>
+          <rect x="9" y="48" width="52" height="4"   rx="2"   fill="#e2e8f0"/>
+          <rect x="9" y="57" width="38" height="4"   rx="2"   fill="#e2e8f0"/>
+          <rect x="9" y="70" width="56" height="16"  rx="5"   fill="#eff6ff"/>
+          <rect x="18" y="76" width="38" height="4"  rx="2"   fill="#bfdbfe"/>
+        </g>
+
+        <!-- ── Planta decorativa ── -->
+        <g transform="translate(340,305)">
+          <!-- Maceta -->
+          <rect x="8"  y="48" width="40" height="26" rx="5"  fill="#6d28d9" opacity="0.85"/>
+          <rect x="4"  y="44" width="48" height="8"  rx="4"  fill="#7c3aed" opacity="0.9"/>
+          <!-- Tallo -->
+          <line x1="28" y1="44" x2="28" y2="18" stroke="#059669" stroke-width="3"
+                stroke-linecap="round"/>
+          <!-- Hojas -->
+          <ellipse cx="18" cy="30" rx="14" ry="7"  fill="#10b981"
+                   transform="rotate(-35 18 30)"/>
+          <ellipse cx="38" cy="28" rx="14" ry="7"  fill="#059669"
+                   transform="rotate(35 38 28)"/>
+          <ellipse cx="28" cy="18" rx="10" ry="6"  fill="#34d399"/>
+        </g>
+
+        <!-- ── Avión de papel ── -->
+        <g transform="translate(364,28) rotate(-18)">
+          <path d="M0 12 L24 0 L18 24 L12 16 Z" fill="#2563eb" opacity="0.55"/>
+          <path d="M12 16 L18 24 L10 20 Z"       fill="#1a3a6c" opacity="0.45"/>
+        </g>
+
+        <!-- ── Partículas flotantes ── -->
+        <circle cx="85"  cy="55"  r="5"   fill="#2563eb" opacity="0.22"/>
+        <circle cx="78"  cy="175" r="3.5" fill="#0ea5e9" opacity="0.2"/>
+        <circle cx="370" cy="190" r="5"   fill="#0ea5e9" opacity="0.2"/>
+        <circle cx="355" cy="130" r="3"   fill="#1a3a6c" opacity="0.15"/>
+        <circle cx="400" cy="95"  r="4"   fill="#2563eb" opacity="0.18"/>
+        <circle cx="50"  cy="130" r="3"   fill="#2563eb" opacity="0.18"/>
+
+      </svg>
+
+      <div class="login-right-label">
+        <span class="badge-it">IT</span>
+        <div>
+          <div style="font-weight:700;color:#1a3a6c;font-size:.9rem;">Informes Técnicos</div>
+          <div style="font-size:.76rem;color:#64748b;">Gestión institucional TICS</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
 {% endblock %}
