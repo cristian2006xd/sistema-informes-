@@ -542,6 +542,30 @@ TIPO_TEMPLATES = {
     "INSTALACION":         "form_instalacion.html",
 }
 
+DIRECCIONES = [
+    "COORDINACIÓN DE LA GESTIÓN INSTITUCIONAL SEDE GUAYAQUIL",
+    "COORDINACIÓN DE LA GESTIÓN INSTITUCIONAL SEDE LOJA",
+    "COORDINACIÓN DE LA GESTIÓN INSTITUCIONAL SEDE QUITO",
+    "COORDINACIÓN DE LA GESTIÓN INSTITUCIONAL SEDE RIOBAMBA",
+    "DIRECCIÓN ADMINISTRATIVA FINANCIERA",
+    "DIRECCIÓN DE ADMINISTRACIÓN DE RECURSOS HUMANOS",
+    "DIRECCIÓN DE ASESORÍA JURÍDICA",
+    "DIRECCIÓN DE COMUNICACIÓN SOCIAL",
+    "DIRECCIÓN DE ESTUDIOS, INVESTIGACIÓN Y DESARROLLO HIDROMETEOROLÓGICO",
+    "DIRECCIÓN DE INFORMACIÓN HIDROMETEOROLÓGICA",
+    "DIRECCIÓN DE LA RED DE OBSERVACIÓN HIDROMETEOROLÓGICA",
+    "DIRECCIÓN DE LABORATORIOS DE CALIDAD DE AGUAS Y SEDIMENTOS",
+    "DIRECCIÓN DE PLANIFICACIÓN",
+    "DIRECCIÓN DE PRONÓSTICOS Y ALERTAS HIDROMETEOROLÓGICAS",
+    "DIRECCIÓN EJECUTIVA",
+    "DIRECCIÓN REGIONAL TÉCNICA HIDROMETEOROLÓGICA - MANABÍ",
+    "DIRECCIÓN REGIONAL TÉCNICA HIDROMETEOROLÓGICA - NAPO",
+    "DIRECCIÓN REGIONAL TÉCNICA HIDROMETEOROLÓGICA - PASTAZA",
+    "DIRECCIÓN REGIONAL TÉCNICA HIDROMETEOROLÓGICA ESMERALDAS - MIRA",
+    "DIRECCIÓN REGIONAL TÉCNICA HIDROMETEOROLÓGICA GUAYAS - GALÁPAGOS",
+    "DIRECCIÓN REGIONAL TÉCNICA HIDROMETEOROLÓGICA MORONA SANTIAGO"
+]
+
 def _procesar_edicion_informe(informe_id):
     """Actualiza un informe existente y regenera el Word."""
     conn   = get_db_connection()
@@ -720,7 +744,9 @@ def _procesar_edicion_informe(informe_id):
 def form_revision_asignacion():
     return render_template("form_re_asignacion.html",
                            today=datetime.now().strftime("%Y-%m-%d"),
-                           config=_get_config())
+                           config=_get_config(),
+                           direcciones=DIRECCIONES
+                           )
 
 
 @app.route("/informe/revision-asignacion/generar", methods=["POST"])
@@ -734,7 +760,9 @@ def generar_revision_asignacion():
 def form_descargo():
     return render_template("form_descargo.html",
                            today=datetime.now().strftime("%Y-%m-%d"),
-                           config=_get_config())
+                           config=_get_config(),
+                           direcciones=DIRECCIONES
+                           )
 
 
 @app.route("/informe/descargo/generar", methods=["POST"])
@@ -748,7 +776,9 @@ def generar_descargo():
 def form_revision_estado():
     return render_template("form_re_estado.html",
                            today=datetime.now().strftime("%Y-%m-%d"),
-                           config=_get_config())
+                           config=_get_config(),
+                           direcciones=DIRECCIONES
+                           )
 
 
 @app.route("/informe/revision-estado/generar", methods=["POST"])
@@ -762,7 +792,9 @@ def generar_revision_estado():
 def form_cambio_actualizacion():
     return render_template("form_cambio_actualizacion.html",
                            today=datetime.now().strftime("%Y-%m-%d"),
-                           config=_get_config())
+                           config=_get_config(),
+                           direcciones=DIRECCIONES
+                           )
 
 
 @app.route("/informe/cambio-actualizacion/generar", methods=["POST"])
@@ -776,7 +808,9 @@ def generar_cambio_actualizacion():
 def form_instalacion():
     return render_template("form_instalacion.html",
                            today=datetime.now().strftime("%Y-%m-%d"),
-                           config=_get_config())
+                           config=_get_config(),
+                           direcciones=DIRECCIONES
+                           )
 
 
 @app.route("/informe/instalacion/generar", methods=["POST"])
@@ -812,7 +846,8 @@ def form_otros():
         "form_otros.html",
         today=datetime.now().strftime("%Y-%m-%d"),
         numero_preview=_siguiente_numero_informe(),
-        config=_get_config()
+        config=_get_config(),
+        direcciones=DIRECCIONES
     )
 
 
@@ -951,16 +986,19 @@ def editar_informe(informe_id):
             config[key] = informe[key]
 
     tmpl = TIPO_TEMPLATES.get(informe["tipo"], "form_re_asignacion.html")
-    return render_template(tmpl,
-                           today=informe["fecha"],
-                           config=config,
-                           informe=informe,
-                           bienes=bienes,
-                           fotos_grupo1=fotos_grupo1,
-                           fotos_grupo2=fotos_grupo2,
-                           fotos_por_bien=fotos_por_bien,
-                           modo_edicion=True,
-                           informe_id=informe_id)
+    return render_template(
+    tmpl,
+    today=informe["fecha"],
+    config=config,
+    informe=informe,
+    bienes=bienes,
+    fotos_grupo1=fotos_grupo1,
+    fotos_grupo2=fotos_grupo2,
+    fotos_por_bien=fotos_por_bien,
+    modo_edicion=True,
+    informe_id=informe_id,
+    direcciones=DIRECCIONES
+)
 
 
 @app.route("/historial/<int:informe_id>/editar/guardar", methods=["POST"])
@@ -1119,13 +1157,21 @@ def descargar_pdf_informe(informe_id):
     numero = row["numero_informe"]
 
     try:
-        from docx2pdf import convert
+        import subprocess, sys
         ruta_pdf = ruta_docx.replace(".docx", ".pdf")
-        if not os.path.exists(ruta_pdf):
-            convert(ruta_docx, ruta_pdf)
-        return send_file(ruta_pdf, as_attachment=False, download_name=f"{numero}.pdf")
+        # Convertir en subprocess para evitar estado corrupto del COM de Word entre llamadas
+        if not os.path.exists(ruta_pdf) or os.path.getsize(ruta_pdf) == 0:
+            result = subprocess.run(
+                [sys.executable, "-c",
+                 f"from docx2pdf import convert; convert(r'{os.path.abspath(ruta_docx)}', r'{os.path.abspath(ruta_pdf)}')"],
+                timeout=60,
+                capture_output=True
+            )
+            if result.returncode != 0 or not os.path.exists(ruta_pdf) or os.path.getsize(ruta_pdf) == 0:
+                raise Exception("PDF conversion failed")
+        return send_file(os.path.abspath(ruta_pdf), as_attachment=False, download_name=f"{numero}.pdf")
     except Exception:
-        return send_file(ruta_docx, as_attachment=False, download_name=f"{numero}.docx")
+        return send_file(os.path.abspath(ruta_docx), as_attachment=True, download_name=f"{numero}.docx")
 
 # =====================================================
 # USUARIOS

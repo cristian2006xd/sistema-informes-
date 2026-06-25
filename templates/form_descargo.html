@@ -207,9 +207,18 @@
 
             <label class="form-label">Dirección / Dependencia <span class="text-danger">*</span></label>
 
-            <input type="text" name="direccion" class="form-control" placeholder="Dirección o nombre de la dependencia" required
+            <select name="direccion" class="form-select" required>
+    <option value="">Seleccione una Dirección</option>
 
-                   value="{{ informe.direccion if (informe is defined and informe) else '' }}">
+    {% for d in direcciones %}
+    <option value="{{ d }}"
+        {% if informe is defined and informe and informe.direccion == d %}
+            selected
+        {% endif %}>
+        {{ d }}
+    </option>
+    {% endfor %}
+</select>
 
           </div>
 
@@ -910,7 +919,11 @@
 
         document.getElementById('btn-ver-doc').href = '/historial/' + data.id + '/descargar-pdf';
 
-        new bootstrap.Modal(document.getElementById('modalExito')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalExito')).show();
+        e.target.reset();
+        document.getElementById('bienes-container').innerHTML = '';
+        agregarBien();
+        updateConclusiones();
 
       } else {
 
@@ -1060,7 +1073,7 @@
     var fb = el.parentNode.querySelector('.val-feedback');
     if (fb) fb.remove();
   }
-  ['nombres','cargo','direccion'].forEach(function(name) {
+  ['nombres','cargo','direccion','elaborado_nombre','elaborado_cargo','aprobado_nombre','aprobado_cargo'].forEach(function(name) {
     var el = document.querySelector('[name="' + name + '"]');
     if (!el) return;
     el.addEventListener('keypress', function(e) {
@@ -1089,12 +1102,31 @@
   if (form) {
     form.addEventListener('submit', function(e) {
       var valid = true;
+      var isEdit = form.action.includes('/editar/guardar');
       ['nombres','cargo','direccion'].forEach(function(name) {
         var el = document.querySelector('[name="' + name + '"]');
         if (el && /\d/.test(el.value)) { markError(el, 'No se permiten números en este campo.'); valid = false; }
       });
+      ['elaborado_nombre','elaborado_cargo','aprobado_nombre','aprobado_cargo'].forEach(function(name) {
+        var el = document.querySelector('[name="' + name + '"]');
+        if (el && el.value.trim() && /\d/.test(el.value)) { markError(el, 'No se permiten números en este campo.'); valid = false; }
+      });
       if (cedEl && !/^\d{10}$/.test(cedEl.value.trim())) {
         markError(cedEl, 'La cédula debe tener exactamente 10 dígitos.'); valid = false;
+      }
+      document.querySelectorAll('.bien-row').forEach(function(row) {
+        [{n:'tipo_equipo[]',m:'Seleccione o ingrese el tipo de equipo.'},{n:'marca[]',m:'Seleccione o ingrese la marca.'},{n:'estado_bien[]',m:'Seleccione el estado del bien.'},{n:'modelo[]',m:'Ingrese el modelo.'},{n:'codigo_esbye[]',m:'Ingrese el código ESBYE.'},{n:'serie[]',m:'Ingrese el número de serie.'},{n:'codigo_anterior[]',m:'Ingrese el código anterior.'}].forEach(function(f) {
+          var el = row.querySelector('[name="' + f.n + '"]');
+          if (el && !el.value.trim()) { markError(el, f.m); valid = false; }
+        });
+        if (!isEdit) {
+          var fotoEl = row.querySelector('.bien-photos');
+          if (fotoEl && fotoEl.files.length === 0) { markError(fotoEl, 'Suba al menos una fotografía del bien.'); valid = false; }
+        }
+      });
+      if (!isEdit) {
+        var fotoGen = document.querySelector('[name="fotos_grupo_1[]"]');
+        if (fotoGen && fotoGen.files.length === 0) { markError(fotoGen, 'Debe subir la fotografía general.'); valid = false; }
       }
       if (!valid) { e.preventDefault(); e.stopImmediatePropagation(); return false; }
     }, true);

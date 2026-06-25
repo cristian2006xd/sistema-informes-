@@ -130,10 +130,20 @@
             <input type="text" name="cargo" class="form-control" placeholder="CARGO INSTITUCIONAL" required>
           </div>
           <div class="col-md-6">
-            <label class="form-label fw-semibold">Dirección / Dependencia <span class="text-danger">*</span></label>
-            <input type="text" name="direccion" class="form-control"
-                   placeholder="DIRECCIÓN O NOMBRE DE LA DEPENDENCIA" required>
-          </div>
+    <label class="form-label fw-semibold">
+        Dirección / Dependencia <span class="text-danger">*</span>
+    </label>
+
+    <select name="direccion" class="form-control" required>
+        <option value="">Seleccione una Dirección</option>
+
+        {% for d in direcciones %}
+        <option value="{{ d }}">
+            {{ d }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
         </div>
       </div>
 
